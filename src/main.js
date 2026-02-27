@@ -40,6 +40,12 @@ function init() {
   // Render sidebar
   renderSidebar();
 
+  // Inject mobile sidebar overlay
+  injectSidebarOverlay();
+
+  // Inject bottom nav for mobile
+  injectBottomNav();
+
   // Register routes
   registerRoute('/', renderDashboard);
   registerRoute('/dashboard', renderDashboard);
@@ -64,6 +70,11 @@ function init() {
   // Start router
   initRouter();
 
+  // Update bottom nav active state on each route
+  window.addEventListener('hashchange', () => {
+    updateBottomNavActive(window.location.hash.replace('#', '') || '/dashboard');
+  });
+
   // Start notification engine
   initNotificationEngine();
 
@@ -78,14 +89,16 @@ function renderTopbar() {
   const user = getCurrentUser();
 
   topbar.innerHTML = `
-    <div>
+    <div class="topbar-start">
+      <button class="hamburger-btn" id="mobile-menu-btn" aria-label="فتح القائمة">
+        <span></span><span></span><span></span>
+      </button>
       <div class="topbar-title" id="topbar-page-title">لوحة التحكم</div>
     </div>
     <div class="topbar-actions">
-      <button class="btn btn-ghost btn-sm" id="mobile-menu-btn" style="display:none;">☰</button>
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-secondary">${user ? user.name : ''}</span>
-        <select id="user-switcher" class="filter-select" style="min-width: 160px; font-size: var(--text-xs);">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-secondary topbar-username">${user ? user.name : ''}</span>
+        <select id="user-switcher" class="filter-select" style="min-width: 120px; font-size: var(--text-xs);">
           ${Store.getAll(ENTITIES.USERS).map(u =>
     `<option value="${u.id}" ${user && user.id === u.id ? 'selected' : ''}>${u.name} (${u.role})</option>`
   ).join('')}
@@ -102,7 +115,85 @@ function renderTopbar() {
       location.reload();
     }
   });
+
+  // Mobile hamburger
+  const menuBtn = document.getElementById('mobile-menu-btn');
+  menuBtn.addEventListener('click', toggleMobileSidebar);
 }
+
+// ---- Mobile sidebar helpers ----
+export function toggleMobileSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const isOpen = sidebar.classList.contains('open');
+  if (isOpen) {
+    closeMobileSidebar();
+  } else {
+    sidebar.classList.add('open');
+    overlay && overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+export function closeMobileSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.remove('open');
+  overlay && overlay.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function injectSidebarOverlay() {
+  if (document.getElementById('sidebar-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'sidebar-overlay';
+  overlay.className = 'sidebar-overlay';
+  overlay.addEventListener('click', closeMobileSidebar);
+  document.getElementById('app').appendChild(overlay);
+}
+
+function injectBottomNav() {
+  if (document.getElementById('bottom-nav')) return;
+  const openActions = Store.count(ENTITIES.ACTIONS, a => a.status !== 'مكتمل');
+  const nav = document.createElement('nav');
+  nav.id = 'bottom-nav';
+  nav.className = 'bottom-nav';
+  nav.innerHTML = `
+    <button class="bottom-nav-item" data-route="/dashboard" onclick="window.location.hash='/dashboard'">
+      <span class="bn-icon"><i class='bx bxs-dashboard'></i></span>
+      لوحة التحكم
+    </button>
+    <button class="bottom-nav-item" data-route="/cases" onclick="window.location.hash='/cases'">
+      <span class="bn-icon"><i class='bx bxs-folder-open'></i></span>
+      القضايا
+    </button>
+    <button class="bottom-nav-item" data-route="/clients" onclick="window.location.hash='/clients'">
+      <span class="bn-icon"><i class='bx bxs-group'></i></span>
+      العملاء
+    </button>
+    <button class="bottom-nav-item" data-route="/actions" onclick="window.location.hash='/actions'">
+      <span class="bn-icon"><i class='bx bxs-zap'></i></span>
+      ${openActions > 0 ? `<span class="bn-badge">${openActions}</span>` : ''}
+      الإجراءات
+    </button>
+    <button class="bottom-nav-item" data-route="/calendar" onclick="window.location.hash='/calendar'">
+      <span class="bn-icon"><i class='bx bxs-calendar'></i></span>
+      التقويم
+    </button>
+  `;
+  document.getElementById('app').appendChild(nav);
+  updateBottomNavActive(window.location.hash.replace('#', '') || '/dashboard');
+}
+
+function updateBottomNavActive(route) {
+  const nav = document.getElementById('bottom-nav');
+  if (!nav) return;
+  nav.querySelectorAll('.bottom-nav-item').forEach(btn => {
+    const r = btn.dataset.route;
+    btn.classList.toggle('active', route === r || (r !== '/' && route.startsWith(r)));
+  });
+}
+
 
 // Page title updater
 export function setPageTitle(title) {

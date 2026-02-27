@@ -16,6 +16,7 @@
     gap: var(--space-6);
 }
 
+
 .widget {
     background: var(--bg-card);
     border: 1px solid var(--border-primary);
@@ -328,11 +329,7 @@
     color: var(--text-secondary);
 }
 
-/* ---- Admin Config ---- */
-.config-table {
-    width: 100%;
-}
-
+/* ---- Config Rows (Admin Settings) ---- */
 .config-row {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
@@ -342,7 +339,106 @@
     align-items: center;
 }
 
-/* ---- Calendar ---- */
+/* ---- Calendar Mobile Agenda View ---- */
+.cal-agenda {
+    display: none;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.cal-agenda-day {
+    background: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.cal-agenda-day-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-primary);
+    font-size: var(--text-sm);
+    font-weight: 700;
+}
+
+.cal-agenda-day-num {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: var(--bg-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-base);
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.cal-agenda-day-num.today {
+    background: var(--accent-primary);
+    color: var(--text-inverse);
+}
+
+.cal-agenda-day-events {
+    padding: var(--space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.cal-agenda-event {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--bg-tertiary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.cal-agenda-event:hover {
+    background: var(--bg-card-hover);
+}
+
+.cal-agenda-event-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.cal-agenda-event-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cal-agenda-event-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cal-agenda-event-sub {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    margin-top: 2px;
+}
+
+.cal-agenda-empty {
+    text-align: center;
+    padding: var(--space-12) var(--space-4);
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+}
+
+
 .cal-header {
     display: flex;
     align-items: center;
@@ -599,20 +695,31 @@
     .dashboard-stats {
         grid-template-columns: repeat(2, 1fr);
     }
-
-    .dashboard-widgets {
-        grid-template-columns: 1fr;
-    }
 }
 
 @media (max-width: 768px) {
     .dashboard-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dashboard-widgets {
         grid-template-columns: 1fr;
     }
 
     .case-detail-header {
         flex-direction: column;
         gap: var(--space-4);
+    }
+
+    .case-detail-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .case-detail-actions .btn {
+        flex: 1;
+        min-width: 100px;
+        justify-content: center;
     }
 
     .form-row,
@@ -625,16 +732,47 @@
         align-items: stretch;
     }
 
-    .cal-day {
-        min-height: 70px;
+    /* Calendar: hide grid, show agenda */
+    .cal-grid,
+    .cal-weekdays,
+    .cal-legend {
+        display: none;
     }
 
-    .cal-event-title {
-        max-width: 60px;
+    .cal-agenda {
+        display: flex;
+    }
+
+    .cal-header {
+        flex-wrap: wrap;
+        padding: var(--space-3) var(--space-4);
+        gap: var(--space-2);
     }
 
     .cal-month-title {
         font-size: var(--text-base);
-        min-width: 140px;
+        min-width: 120px;
+    }
+
+    /* Config rows: stack on mobile */
+    .config-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-2);
+        padding: var(--space-4) 0;
+    }
+
+    /* Widget body: allow full height on mobile */
+    .widget-body {
+        max-height: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .case-badges {
+        flex-wrap: wrap;
     }
 }

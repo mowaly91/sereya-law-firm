@@ -5,16 +5,17 @@
 import Store from '../data/store.js';
 import { ENTITIES } from '../data/models.js';
 import { getCurrentUser, isPartner } from '../data/permissions.js';
+import { closeMobileSidebar } from '../main.js';
 
 export function renderSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const user = getCurrentUser();
+  const sidebar = document.getElementById('sidebar');
+  const user = getCurrentUser();
 
-    // Count open actions and deadlines for badges
-    const openActions = Store.count(ENTITIES.ACTIONS, a => a.status !== 'مكتمل');
-    const openDeadlines = Store.count(ENTITIES.DEADLINES, d => d.status === 'مفتوح');
+  // Count open actions and deadlines for badges
+  const openActions = Store.count(ENTITIES.ACTIONS, a => a.status !== 'مكتمل');
+  const openDeadlines = Store.count(ENTITIES.DEADLINES, d => d.status === 'مفتوح');
 
-    sidebar.innerHTML = `
+  sidebar.innerHTML = `
     <div class="sidebar-logo flex flex-col items-center gap-2">
       <img src="/logo-transparent.png" alt="Saryia Logo" style="width: 120px; margin-bottom: -10px;" />
       <h2 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--accent-primary);">مكتب سرية للمحاماه</h2>
@@ -87,6 +88,14 @@ export function renderSidebar() {
       </div>
     </div>
   `;
+  // Close sidebar on mobile when a link is clicked
+  sidebar.querySelectorAll('.sidebar-link').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        closeMobileSidebar();
+      }
+    });
+  });
 }
 
 export default { renderSidebar };

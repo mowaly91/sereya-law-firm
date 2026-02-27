@@ -88,9 +88,8 @@ export function renderCalendar(container) {
         const todayStr = new Date().toISOString().split('T')[0];
         const MAX_VISIBLE = 3;
 
-        // Build day cells
+        // Build day cells (desktop grid)
         let dayCells = '';
-        // Empty padding cells for days before the 1st
         for (let i = 0; i < startDayOfWeek; i++) {
             dayCells += '<div class="cal-day cal-day-empty"></div>';
         }
@@ -105,7 +104,6 @@ export function renderCalendar(container) {
             const visibleEvents = events.slice(0, MAX_VISIBLE);
             const remaining = events.length - MAX_VISIBLE;
 
-            // Rule 1 & 2: Full client name, no truncation
             let eventsHtml = visibleEvents.map(ev => `
                 <div class="cal-event cal-event-${ev.type}"
                      data-caseid="${ev.caseId}"
@@ -117,7 +115,6 @@ export function renderCalendar(container) {
                 </div>
             `).join('');
 
-            // Rule 4: "+X more" if more than 3
             if (remaining > 0) {
                 eventsHtml += `<button class="cal-more-btn" data-date="${dateStr}">+${remaining} المزيد</button>`;
             }
@@ -130,6 +127,38 @@ export function renderCalendar(container) {
                 </div>
             `;
         }
+
+        // Build agenda list (mobile view)
+        const agendaDays = [];
+        for (let day = 1; day <= daysInMonth; day++) {
+            const mn = String(month + 1).padStart(2, '0');
+            const dd = String(day).padStart(2, '0');
+            const dateStr = `${year}-${mn}-${dd}`;
+            const evs = eventMap[dateStr];
+            if (evs && evs.length > 0) agendaDays.push({ dateStr, day, events: evs });
+        }
+
+        const agendaHTML = agendaDays.length > 0
+            ? agendaDays.map(({ dateStr, day, events }) => {
+                const isToday = dateStr === todayStr;
+                return `<div class="cal-agenda-day">
+                    <div class="cal-agenda-day-header">
+                        <div class="cal-agenda-day-num ${isToday ? 'today' : ''}">${day}</div>
+                        <span>${monthNames[month]} ${year}</span>
+                    </div>
+                    <div class="cal-agenda-day-events">
+                        ${events.map(ev => `
+                        <div class="cal-agenda-event" data-caseid="${ev.caseId}" style="cursor:pointer;">
+                            <span class="cal-agenda-event-dot" style="background:${ev.type === 'session' ? 'hsl(210,90%,56%)' : 'hsl(30,90%,56%)'}"></span>
+                            <div class="cal-agenda-event-info">
+                                <div class="cal-agenda-event-title">${ev.title}</div>
+                                <div class="cal-agenda-event-sub">${ev.label}</div>
+                            </div>
+                        </div>`).join('')}
+                    </div>
+                </div>`;
+            }).join('')
+            : `<div class="cal-agenda-empty">📅 لا توجد أحداث هذا الشهر</div>`;
 
         container.innerHTML = `
         <div class="animate-fade-in">
@@ -151,6 +180,9 @@ export function renderCalendar(container) {
                 <div class="cal-days">
                     ${dayCells}
                 </div>
+            </div>
+            <div class="cal-agenda">
+                ${agendaHTML}
             </div>
         </div>
         `;
@@ -176,6 +208,14 @@ export function renderCalendar(container) {
         container.querySelectorAll('.cal-event').forEach(el => {
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
+                const caseId = el.dataset.caseid;
+                if (caseId) window.location.hash = `/cases/${caseId}`;
+            });
+        });
+
+        // Agenda events → navigate to Case Details
+        container.querySelectorAll('.cal-agenda-event').forEach(el => {
+            el.addEventListener('click', () => {
                 const caseId = el.dataset.caseid;
                 if (caseId) window.location.hash = `/cases/${caseId}`;
             });

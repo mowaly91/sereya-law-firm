@@ -102,6 +102,7 @@
     --sidebar-width: 260px;
     --sidebar-collapsed: 72px;
     --topbar-height: 64px;
+    --bottom-nav-height: 0px;
 }
 
 /* Reset & Base */
@@ -127,6 +128,21 @@ body {
     line-height: 1.6;
     overflow: hidden;
     min-height: 100vh;
+}
+
+/* Sidebar Overlay (mobile) */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 99;
+    animation: fadeIn 200ms ease-out;
+}
+
+.sidebar-overlay.active {
+    display: block;
 }
 
 /* App Layout */
@@ -399,19 +415,36 @@ a:hover {
 
     :root {
         --sidebar-width: 0px;
+        --topbar-height: 56px;
+        --bottom-nav-height: 60px;
+    }
+
+    body {
+        overflow: hidden;
     }
 
     #sidebar {
         transform: translateX(100%);
+        width: 260px !important;
+        z-index: 200;
     }
 
     #sidebar.open {
         transform: translateX(0);
-        width: 260px;
     }
 
     #main-content {
         margin-right: 0;
+        padding-bottom: var(--bottom-nav-height);
+    }
+
+    #page-content {
+        padding: var(--space-4);
+        max-height: calc(100vh - var(--topbar-height) - var(--bottom-nav-height));
+    }
+
+    #topbar {
+        padding: 0 var(--space-4);
     }
 }
 
