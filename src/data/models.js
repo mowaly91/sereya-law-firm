@@ -29,7 +29,8 @@ export const SESSION_STATUS_BADGE = { 'مفتوح': 'open', 'مغلق': 'complet
 
 export const NO_NEXT_DATE_REASONS = ['حجز للحكم', 'صدور حكم نهائي', 'شطب نهائي', 'حفظ', 'أخرى'];
 
-export const ACTION_TYPES = [
+// Default seeds (used by lookup-service.js to initialise storage on first run)
+export const DEFAULT_ACTION_TYPES = [
     'إعلان/خدمة',
     'تصريح محكمة',
     'حزمة تحضير',
@@ -43,6 +44,8 @@ export const ACTION_TYPES = [
     'معارضة',
     'أخرى'
 ];
+// Backward-compat alias (still exported so existing imports don’t break during migration)
+export const ACTION_TYPES = DEFAULT_ACTION_TYPES;
 
 export const PRIORITY_LEVELS = ['عالية', 'متوسطة', 'منخفضة'];
 
@@ -58,7 +61,7 @@ export const DEADLINE_TYPES = [
     'أخرى'
 ];
 
-export const DECISION_TYPES = [
+export const DEFAULT_DECISION_TYPES = [
     'تأجيل لإعادة الإعلان',
     'تأجيل لتصريح',
     'تأجيل لمذكرة ومستندات',
@@ -75,6 +78,8 @@ export const DECISION_TYPES = [
     'تأجيل عام',
     'نطق بالحكم'
 ];
+// Backward-compat alias
+export const DECISION_TYPES = DEFAULT_DECISION_TYPES;
 
 export const USER_ROLES = ['شريك', 'محامي مسؤول', 'محامي', 'متدرب'];
 export const USER_ROLES_EN = { 'شريك': 'partner', 'محامي مسؤول': 'caseOwner', 'محامي': 'lawyer', 'متدرب': 'trainee' };
@@ -89,7 +94,9 @@ export const ENTITIES = {
     USERS: 'users',
     AUDIT: 'audit',
     DECISION_MAP: 'decision_map',
-    SETTINGS: 'settings'
+    SETTINGS: 'settings',
+    LOOKUP_ACTION_TYPES: 'lookup_action_types',
+    LOOKUP_DECISION_TYPES: 'lookup_decision_types'
 };
 
 // --- Factory Functions ---

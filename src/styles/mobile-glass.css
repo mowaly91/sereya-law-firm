@@ -1,0 +1,311 @@
+/* ============================================================
+   MOBILE GLASSMORPHISM – COSMETIC ONLY
+   Only changes: background, backdrop-filter, border, box-shadow,
+   color, border-radius. NO layout/position/display/flex changes.
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+    /* ---- Topbar glass ---- */
+    #topbar {
+        background: rgba(0, 10, 24, 0.75) !important;
+        backdrop-filter: blur(24px) saturate(160%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+        border-bottom: 1px solid rgba(226, 170, 105, 0.18) !important;
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    .topbar-title {
+        background: linear-gradient(120deg, #f1f5f9 40%, #E2AA69 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* ---- Hamburger neon lines ---- */
+    .hamburger-btn {
+        background: rgba(226, 170, 105, 0.08) !important;
+        border: 1px solid rgba(226, 170, 105, 0.28) !important;
+        box-shadow: 0 0 10px rgba(226, 170, 105, 0.12) !important;
+    }
+
+    .hamburger-btn span {
+        background: #E2AA69 !important;
+    }
+
+    /* ---- Sidebar drawer glass ---- */
+    #sidebar {
+        background: rgba(0, 6, 16, 0.94) !important;
+        backdrop-filter: blur(28px) saturate(170%) !important;
+        -webkit-backdrop-filter: blur(28px) saturate(170%) !important;
+        border-left: 1px solid rgba(226, 170, 105, 0.15) !important;
+        box-shadow: -6px 0 48px rgba(0, 0, 0, 0.8) !important;
+    }
+
+    .sidebar-link.active {
+        background: rgba(226, 170, 105, 0.1) !important;
+        border: 1px solid rgba(226, 170, 105, 0.28) !important;
+        box-shadow: 0 0 14px rgba(226, 170, 105, 0.12) !important;
+        color: #E2AA69 !important;
+    }
+
+    .sidebar-link:hover {
+        background: rgba(226, 170, 105, 0.07) !important;
+        border: 1px solid rgba(226, 170, 105, 0.15) !important;
+    }
+
+    /* ---- Sidebar overlay ---- */
+    .sidebar-overlay {
+        background: rgba(0, 2, 8, 0.72) !important;
+        backdrop-filter: blur(4px) !important;
+        -webkit-backdrop-filter: blur(4px) !important;
+    }
+
+    /* ---- Bottom nav glass ---- */
+    .bottom-nav {
+        background: rgba(0, 6, 16, 0.88) !important;
+        backdrop-filter: blur(30px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+        border-top: 1px solid rgba(226, 170, 105, 0.16) !important;
+        box-shadow: 0 -4px 28px rgba(0, 0, 0, 0.55) !important;
+    }
+
+    .bottom-nav-item.active {
+        color: #E2AA69 !important;
+        background: rgba(226, 170, 105, 0.08) !important;
+    }
+
+    .bottom-nav-item.active .bn-icon {
+        filter: drop-shadow(0 0 5px rgba(226, 170, 105, 0.55));
+    }
+
+    /* ---- Cards glass ---- */
+    .card {
+        background: rgba(0, 22, 48, 0.6) !important;
+        backdrop-filter: blur(20px) saturate(150%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+        border: 1px solid rgba(226, 170, 105, 0.16) !important;
+        border-radius: 18px !important;
+        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+    }
+
+    /* ---- Widgets glass ---- */
+    .widget {
+        background: rgba(0, 22, 48, 0.6) !important;
+        backdrop-filter: blur(18px) saturate(150%) !important;
+        -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+        border: 1px solid rgba(226, 170, 105, 0.14) !important;
+        border-radius: 18px !important;
+        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45) !important;
+    }
+
+    .widget-header {
+        border-bottom: 1px solid rgba(226, 170, 105, 0.1) !important;
+    }
+
+    /* ---- Table rows as glass cards ---- */
+    .data-table tr {
+        background: rgba(0, 20, 44, 0.55) !important;
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
+        border: 1px solid rgba(226, 170, 105, 0.14) !important;
+        border-radius: 14px !important;
+        box-shadow: 0 3px 16px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    .data-table td[data-label]::before {
+        color: rgba(226, 170, 105, 0.65) !important;
+    }
+
+    .table-container {
+        background: transparent !important;
+        border: none !important;
+    }
+
+    /* ---- Search & filter inputs glass ---- */
+    .search-input input,
+    .filter-select {
+        background: rgba(0, 18, 42, 0.65) !important;
+        border: 1px solid rgba(226, 170, 105, 0.16) !important;
+        border-radius: 12px !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+    }
+
+    .search-input input:focus,
+    .filter-select:focus {
+        border-color: rgba(226, 170, 105, 0.4) !important;
+        box-shadow: 0 0 0 3px rgba(226, 170, 105, 0.08) !important;
+    }
+
+    /* ---- Form inputs glass ---- */
+    .form-input,
+    .form-select,
+    .form-textarea {
+        background: rgba(0, 18, 42, 0.6) !important;
+        border: 1px solid rgba(148, 163, 184, 0.16) !important;
+        border-radius: 12px !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+        border-color: rgba(226, 170, 105, 0.4) !important;
+        box-shadow: 0 0 0 3px rgba(226, 170, 105, 0.09) !important;
+        background: rgba(0, 24, 56, 0.72) !important;
+    }
+
+    /* ---- Modal bottom-sheet glass ---- */
+    .modal,
+    .modal-lg {
+        background: rgba(0, 10, 24, 0.92) !important;
+        backdrop-filter: blur(28px) saturate(170%) !important;
+        -webkit-backdrop-filter: blur(28px) saturate(170%) !important;
+        border: 1px solid rgba(226, 170, 105, 0.18) !important;
+        border-bottom: none !important;
+        box-shadow: 0 -6px 48px rgba(0, 0, 0, 0.75) !important;
+    }
+
+    .modal-overlay {
+        background: rgba(0, 2, 8, 0.78) !important;
+        backdrop-filter: blur(6px) !important;
+        -webkit-backdrop-filter: blur(6px) !important;
+    }
+
+    .modal-header {
+        border-bottom: 1px solid rgba(226, 170, 105, 0.1) !important;
+    }
+
+    .modal-title {
+        background: linear-gradient(120deg, #f1f5f9 40%, #E2AA69 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    /* ---- Tabs glass switcher ---- */
+    .tabs {
+        background: rgba(0, 16, 38, 0.5) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(226, 170, 105, 0.1) !important;
+        border-radius: 14px !important;
+        padding: 3px !important;
+        gap: 2px !important;
+    }
+
+    .tab-btn {
+        border-bottom: none !important;
+        border-radius: 11px !important;
+    }
+
+    .tab-btn.active {
+        background: rgba(226, 170, 105, 0.1) !important;
+        border: 1px solid rgba(226, 170, 105, 0.22) !important;
+        border-bottom-color: rgba(226, 170, 105, 0.22) !important;
+        color: #E2AA69 !important;
+        box-shadow: 0 0 10px rgba(226, 170, 105, 0.1) !important;
+    }
+
+    /* ---- Calendar header & agenda glass ---- */
+    .cal-header {
+        background: rgba(0, 22, 48, 0.6) !important;
+        backdrop-filter: blur(18px) !important;
+        -webkit-backdrop-filter: blur(18px) !important;
+        border: 1px solid rgba(226, 170, 105, 0.14) !important;
+        border-radius: 18px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    .cal-agenda-day {
+        background: rgba(0, 22, 48, 0.55) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(226, 170, 105, 0.13) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.38) !important;
+    }
+
+    .cal-agenda-day-header {
+        border-bottom: 1px solid rgba(226, 170, 105, 0.1) !important;
+    }
+
+    .cal-agenda-day-num.today {
+        background: #E2AA69 !important;
+        color: #000 !important;
+        box-shadow: 0 0 10px rgba(226, 170, 105, 0.5) !important;
+    }
+
+    .cal-agenda-event {
+        background: rgba(0, 28, 58, 0.5) !important;
+        border: 1px solid rgba(148, 163, 184, 0.08) !important;
+        border-radius: 10px !important;
+    }
+
+    /* ---- Case detail header glass ---- */
+    .case-detail-header {
+        background: rgba(0, 22, 48, 0.58) !important;
+        backdrop-filter: blur(18px) !important;
+        -webkit-backdrop-filter: blur(18px) !important;
+        border: 1px solid rgba(226, 170, 105, 0.14) !important;
+        border-radius: 18px !important;
+        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45) !important;
+    }
+
+    /* ---- Notification bar glass ---- */
+    .notif-bar {
+        background: rgba(245, 158, 11, 0.07) !important;
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
+        border: 1px solid rgba(245, 158, 11, 0.18) !important;
+        border-radius: 16px !important;
+    }
+
+    /* ---- Buttons rounded ---- */
+    .btn-primary {
+        border-radius: 12px !important;
+    }
+
+    .btn-secondary {
+        border-radius: 12px !important;
+    }
+
+    /* ---- Toast ---- */
+    .toast {
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 14px !important;
+    }
+
+    /* ---- Timeline ---- */
+    .timeline-content {
+        background: rgba(0, 22, 48, 0.55) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(226, 170, 105, 0.12) !important;
+        border-radius: 14px !important;
+    }
+
+    /* ---- Badge glass ---- */
+    .badge {
+        backdrop-filter: blur(6px);
+    }
+
+    /* ---- Risk flag ---- */
+    .risk-flag {
+        backdrop-filter: blur(10px) !important;
+        border-radius: 12px !important;
+    }
+
+    /* ---- Page header title gradient ---- */
+    .page-header h1 {
+        background: linear-gradient(120deg, #f1f5f9 50%, #E2AA69 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+}

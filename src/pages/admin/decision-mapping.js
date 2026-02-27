@@ -4,22 +4,22 @@
 
 import { setPageTitle } from '../../main.js';
 import { getDecisionActionMappings, updateMapping, addMapping, deleteMapping } from '../../config/decision-action-map.js';
-import { DECISION_TYPES, ACTION_TYPES } from '../../data/models.js';
+import { getActionTypes, getDecisionTypes } from '../../data/lookup-service.js';
 import { showToast } from '../../components/toast.js';
 import { openModal, closeModal } from '../../components/modal.js';
 import { isPartner } from '../../data/permissions.js';
 
 export function renderDecisionMapping(container) {
-    setPageTitle('ربط القرارات بالإجراءات');
+  setPageTitle('ربط القرارات بالإجراءات');
 
-    if (!isPartner()) {
-        container.innerHTML = '<div class="empty-state"><h3>غير مصرح</h3><p>هذه الصفحة متاحة للشركاء فقط</p></div>';
-        return;
-    }
+  if (!isPartner()) {
+    container.innerHTML = '<div class="empty-state"><h3>غير مصرح</h3><p>هذه الصفحة متاحة للشركاء فقط</p></div>';
+    return;
+  }
 
-    const mappings = getDecisionActionMappings();
+  const mappings = getDecisionActionMappings();
 
-    container.innerHTML = `
+  container.innerHTML = `
     <div class="animate-fade-in">
       <div class="page-header">
         <div>
@@ -65,33 +65,35 @@ export function renderDecisionMapping(container) {
     </div>
   `;
 
-    // Add mapping
-    container.querySelector('#add-mapping-btn').addEventListener('click', () => {
-        openMappingModal(null, container);
-    });
+  // Add mapping
+  container.querySelector('#add-mapping-btn').addEventListener('click', () => {
+    openMappingModal(null, container);
+  });
 
-    // Edit mapping
-    container.querySelectorAll('.edit-mapping').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const m = mappings.find(x => x.id === btn.dataset.id);
-            if (m) openMappingModal(m, container);
-        });
+  // Edit mapping
+  container.querySelectorAll('.edit-mapping').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const m = mappings.find(x => x.id === btn.dataset.id);
+      if (m) openMappingModal(m, container);
     });
+  });
 
-    // Delete mapping
-    container.querySelectorAll('.delete-mapping').forEach(btn => {
-        btn.addEventListener('click', () => {
-            deleteMapping(btn.dataset.id);
-            showToast('تم حذف الربط', 'success');
-            renderDecisionMapping(container);
-        });
+  // Delete mapping
+  container.querySelectorAll('.delete-mapping').forEach(btn => {
+    btn.addEventListener('click', () => {
+      deleteMapping(btn.dataset.id);
+      showToast('تم حذف الربط', 'success');
+      renderDecisionMapping(container);
     });
+  });
 }
 
 function openMappingModal(existing, container) {
-    const isEdit = !!existing;
+  const isEdit = !!existing;
+  const DECISION_TYPES = getDecisionTypes();
+  const ACTION_TYPES = getActionTypes();
 
-    const content = `
+  const content = `
     <form id="mapping-form">
       <div class="form-group">
         <label class="form-label">نوع القرار <span class="required">*</span></label>
@@ -128,37 +130,37 @@ function openMappingModal(existing, container) {
     </form>
   `;
 
-    const footer = `
+  const footer = `
     <button class="btn btn-primary" id="save-mapping">${isEdit ? '💾 حفظ' : '✓ إضافة'}</button>
     <button class="btn btn-secondary" onclick="document.getElementById('active-modal')?.remove()">إلغاء</button>
   `;
 
-    openModal(isEdit ? 'تعديل الربط' : 'إضافة ربط جديد', content, { footer });
+  openModal(isEdit ? 'تعديل الربط' : 'إضافة ربط جديد', content, { footer });
 
-    document.getElementById('save-mapping').addEventListener('click', () => {
-        const data = {
-            decisionType: document.getElementById('map-decision').value,
-            actionType: document.getElementById('map-action').value,
-            executionProof: document.getElementById('map-proof').value,
-            requiresNextDate: document.getElementById('map-requires-date').checked,
-            urgent: document.getElementById('map-urgent').checked
-        };
+  document.getElementById('save-mapping').addEventListener('click', () => {
+    const data = {
+      decisionType: document.getElementById('map-decision').value,
+      actionType: document.getElementById('map-action').value,
+      executionProof: document.getElementById('map-proof').value,
+      requiresNextDate: document.getElementById('map-requires-date').checked,
+      urgent: document.getElementById('map-urgent').checked
+    };
 
-        if (!data.decisionType || !data.actionType) {
-            showToast('نوع القرار والإجراء مطلوبان', 'error');
-            return;
-        }
+    if (!data.decisionType || !data.actionType) {
+      showToast('نوع القرار والإجراء مطلوبان', 'error');
+      return;
+    }
 
-        if (isEdit) {
-            updateMapping(existing.id, data);
-        } else {
-            addMapping(data);
-        }
+    if (isEdit) {
+      updateMapping(existing.id, data);
+    } else {
+      addMapping(data);
+    }
 
-        showToast(isEdit ? 'تم تحديث الربط' : 'تم إضافة الربط', 'success');
-        closeModal();
-        renderDecisionMapping(container);
-    });
+    showToast(isEdit ? 'تم تحديث الربط' : 'تم إضافة الربط', 'success');
+    closeModal();
+    renderDecisionMapping(container);
+  });
 }
 
 export default { renderDecisionMapping };
