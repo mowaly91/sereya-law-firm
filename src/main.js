@@ -24,8 +24,11 @@ import { renderCalendar } from './pages/calendar/calendar.js';
 import { initNotificationEngine } from './components/notification.js';
 
 // Initialize
-function init() {
-  // Seed demo data
+async function init() {
+  // Sync data from backend first
+  await Store.syncFromServer(Object.values(ENTITIES));
+
+  // Seed demo data (will bypass if backend already has users, otherwise creation will sync up)
   seedIfEmpty();
 
   // Ensure current user

@@ -3,7 +3,8 @@
 // ========================================
 
 import Store from '../../data/store.js';
-import { ENTITIES, CASE_STATUS_BADGE, CASE_TYPES_EN, ACTION_STATUS_BADGE, DEADLINE_STATUS_BADGE, SESSION_TYPES, DECISION_TYPES, ACTION_TYPES, DEADLINE_TYPES, NO_NEXT_DATE_REASONS, SESSION_STATUSES, createSession, createAction, createDeadline, PRIORITY_LEVELS, ASSIGNABLE_ROLES } from '../../data/models.js';
+import { ENTITIES, CASE_STATUS_BADGE, CASE_TYPES_EN, ACTION_STATUS_BADGE, DEADLINE_STATUS_BADGE, SESSION_TYPES, DEADLINE_TYPES, NO_NEXT_DATE_REASONS, SESSION_STATUSES, createSession, createAction, createDeadline, PRIORITY_LEVELS, ASSIGNABLE_ROLES } from '../../data/models.js';
+import { getActionTypes, getDecisionTypes } from '../../data/lookup-service.js';
 import { setPageTitle, formatDate, daysUntil, isOverdue } from '../../main.js';
 import { showToast } from '../../components/toast.js';
 import { openModal, closeModal, confirmModal } from '../../components/modal.js';
@@ -13,32 +14,32 @@ import { getMappingForDecision, doesDecisionRequireNextDate, doesDecisionCreateL
 import { openPartnerEditActionModal } from '../actions/action-modals.js';
 
 export function renderCaseDetail(container, params = {}) {
-    const caseData = Store.getById(ENTITIES.CASES, params.id);
-    if (!caseData) {
-        container.innerHTML = `<div class="empty-state"><h3>القضية غير موجودة</h3><button class="btn btn-primary" onclick="window.location.hash='/cases'">العودة للقضايا</button></div>`;
-        return;
-    }
+  const caseData = Store.getById(ENTITIES.CASES, params.id);
+  if (!caseData) {
+    container.innerHTML = `<div class="empty-state"><h3>القضية غير موجودة</h3><button class="btn btn-primary" onclick="window.location.hash='/cases'">العودة للقضايا</button></div>`;
+    return;
+  }
 
-    const client = Store.getById(ENTITIES.CLIENTS, caseData.primaryClientId || caseData.clientId);
-    const allClientIds = caseData.clientIds || (caseData.clientId ? [caseData.clientId] : []);
-    const allClients = allClientIds.map(id => Store.getById(ENTITIES.CLIENTS, id)).filter(Boolean);
-    const clientDisplay = allClients.length > 1
-        ? `${client ? client.name : '—'} وآخرون`
-        : (client ? client.name : '—');
-    const owner = Store.getById(ENTITIES.USERS, caseData.ownerId);
-    const sessions = Store.query(ENTITIES.SESSIONS, s => s.caseId === params.id).sort((a, b) => new Date(b.date) - new Date(a.date));
-    const actions = Store.query(ENTITIES.ACTIONS, a => a.caseId === params.id);
-    const deadlines = Store.query(ENTITIES.DEADLINES, d => d.caseId === params.id);
-    const users = Store.getAll(ENTITIES.USERS);
+  const client = Store.getById(ENTITIES.CLIENTS, caseData.primaryClientId || caseData.clientId);
+  const allClientIds = caseData.clientIds || (caseData.clientId ? [caseData.clientId] : []);
+  const allClients = allClientIds.map(id => Store.getById(ENTITIES.CLIENTS, id)).filter(Boolean);
+  const clientDisplay = allClients.length > 1
+    ? `${client ? client.name : '—'} وآخرون`
+    : (client ? client.name : '—');
+  const owner = Store.getById(ENTITIES.USERS, caseData.ownerId);
+  const sessions = Store.query(ENTITIES.SESSIONS, s => s.caseId === params.id).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const actions = Store.query(ENTITIES.ACTIONS, a => a.caseId === params.id);
+  const deadlines = Store.query(ENTITIES.DEADLINES, d => d.caseId === params.id);
+  const users = Store.getAll(ENTITIES.USERS);
 
-    const openActions = actions.filter(a => a.status !== 'مكتمل');
-    const openDeadlines = deadlines.filter(d => d.status === 'مفتوح');
-    const typeClass = CASE_TYPES_EN[caseData.caseType] || 'civil';
-    const statusClass = CASE_STATUS_BADGE[caseData.status] || 'active';
+  const openActions = actions.filter(a => a.status !== 'مكتمل');
+  const openDeadlines = deadlines.filter(d => d.status === 'مفتوح');
+  const typeClass = CASE_TYPES_EN[caseData.caseType] || 'civil';
+  const statusClass = CASE_STATUS_BADGE[caseData.status] || 'active';
 
-    setPageTitle(`القضية ${caseData.caseNo}/${caseData.year}`);
+  setPageTitle(`القضية ${caseData.caseNo}/${caseData.year}`);
 
-    container.innerHTML = `
+  container.innerHTML = `
     <div class="animate-fade-in">
       <!-- Case Header -->
       <div class="case-detail-header">
@@ -106,10 +107,10 @@ export function renderCaseDetail(container, params = {}) {
         <div class="timeline" id="sessions-timeline">
           ${sessions.length === 0 ? '<div class="empty-state"><p>لا توجد جلسات بعد</p></div>' : ''}
           ${sessions.map(s => {
-        const isInvestigation = s.sessionType === 'تحقيق';
-        const isJudgment = s.decisionResult?.includes('حكم');
-        const isClosed = s.status === 'مغلق';
-        return `
+    const isInvestigation = s.sessionType === 'تحقيق';
+    const isJudgment = s.decisionResult?.includes('حكم');
+    const isClosed = s.status === 'مغلق';
+    return `
               <div class="timeline-item">
                 <div class="timeline-dot ${isJudgment ? 'judgment' : ''} ${isInvestigation ? 'investigation' : ''}"></div>
                 <div class="timeline-content">
@@ -131,7 +132,7 @@ export function renderCaseDetail(container, params = {}) {
                 </div>
               </div>
             `;
-    }).join('')}
+  }).join('')}
         </div>
       </div>
       
@@ -146,40 +147,40 @@ export function renderCaseDetail(container, params = {}) {
         </div>
         ${actions.length === 0 ? '<div class="empty-state"><p>لا توجد إجراءات بعد</p></div>' : ''}
         ${actions.map(a => {
-        const responsible = Store.getById(ENTITIES.USERS, a.responsibleUserId);
-        const clientData = a.clientId ? Store.getById(ENTITIES.CLIENTS, a.clientId) : null;
-        const badgeClass = ACTION_STATUS_BADGE[a.status] || 'open';
-        const overdue = a.dueDate && isOverdue(a.dueDate) && a.status !== 'مكتمل';
-        const canEdit = canEditActions();          // Partner only
-        const currentUser = getCurrentUser();
-        // Complete button: Responsible Lawyer OR Partner
-        const canComplete = a.status !== 'مكتمل'
-            && (canEditActions()
-                || (currentUser && a.responsibleUserId === currentUser.id));
+    const responsible = Store.getById(ENTITIES.USERS, a.responsibleUserId);
+    const clientData = a.clientId ? Store.getById(ENTITIES.CLIENTS, a.clientId) : null;
+    const badgeClass = ACTION_STATUS_BADGE[a.status] || 'open';
+    const overdue = a.dueDate && isOverdue(a.dueDate) && a.status !== 'مكتمل';
+    const canEdit = canEditActions();          // Partner only
+    const currentUser = getCurrentUser();
+    // Complete button: Responsible Lawyer OR Partner
+    const canComplete = a.status !== 'مكتمل'
+      && (canEditActions()
+        || (currentUser && a.responsibleUserId === currentUser.id));
 
-        // Action History entries
-        const history = getActionHistory(a.id);
-        const historyHtml = history.length === 0
-            ? '<div class="text-xs text-secondary" style="padding:var(--space-2) 0">لا توجد سجلات تعديل</div>'
-            : history.map(h => {
-                const fc = h.changes;
-                const timeStr = new Date(h.timestamp).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
-                if (h.action === 'field_change' && fc && fc.field) {
-                    return `<div class="action-history-entry">
+    // Action History entries
+    const history = getActionHistory(a.id);
+    const historyHtml = history.length === 0
+      ? '<div class="text-xs text-secondary" style="padding:var(--space-2) 0">لا توجد سجلات تعديل</div>'
+      : history.map(h => {
+        const fc = h.changes;
+        const timeStr = new Date(h.timestamp).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
+        if (h.action === 'field_change' && fc && fc.field) {
+          return `<div class="action-history-entry">
                         <span class="action-history-time">${timeStr}</span>
                         <span class="action-history-who">${h.userName}</span>
                         <span class="action-history-change">غيّر <strong>${fc.fieldLabel}</strong>: <span class="old-val">${fc.oldValue || '—'}</span> ← <span class="new-val">${fc.newValue || '—'}</span>${fc.editReason ? ` (السبب: ${fc.editReason})` : ''}</span>
                     </div>`;
-                }
-                const actionLabel = { create: 'إنشاء', complete: 'إكمال', update: 'تعديل', delete: 'حذف' }[h.action] || h.action;
-                return `<div class="action-history-entry">
+        }
+        const actionLabel = { create: 'إنشاء', complete: 'إكمال', update: 'تعديل', delete: 'حذف' }[h.action] || h.action;
+        return `<div class="action-history-entry">
                     <span class="action-history-time">${timeStr}</span>
                     <span class="action-history-who">${h.userName}</span>
                     <span class="action-history-change">${actionLabel}</span>
                 </div>`;
-            }).join('');
+      }).join('');
 
-        return `
+    return `
             <div class="card mb-4 ${overdue ? 'risk-flag high' : ''}" style="border-right: 3px solid ${a.status === 'مكتمل' ? 'var(--status-completed)' : a.status === 'معلق' ? 'var(--status-blocked)' : 'var(--status-progress)'};"
                  data-action-id="${a.id}">
 
@@ -234,7 +235,7 @@ export function renderCaseDetail(container, params = {}) {
 
             </div>
           `;
-    }).join('')}
+  }).join('')}
       </div>
       
       <!-- Deadlines Tab -->
@@ -245,12 +246,12 @@ export function renderCaseDetail(container, params = {}) {
         </div>
         ${deadlines.length === 0 ? '<div class="empty-state"><p>لا توجد مواعيد نهائية</p></div>' : ''}
         ${deadlines.map(d => {
-        const responsible = Store.getById(ENTITIES.USERS, d.responsibleUserId);
-        const badgeClass = DEADLINE_STATUS_BADGE[d.status] || 'open';
-        const days = daysUntil(d.endDate);
-        const overdue = d.status === 'مفتوح' && days < 0;
-        const approaching = d.status === 'مفتوح' && days >= 0 && days <= 3;
-        return `
+    const responsible = Store.getById(ENTITIES.USERS, d.responsibleUserId);
+    const badgeClass = DEADLINE_STATUS_BADGE[d.status] || 'open';
+    const days = daysUntil(d.endDate);
+    const overdue = d.status === 'مفتوح' && days < 0;
+    const approaching = d.status === 'مفتوح' && days >= 0 && days <= 3;
+    return `
             <div class="card mb-4" style="border-right: 3px solid ${overdue ? 'var(--risk-high)' : approaching ? 'var(--risk-medium)' : d.status === 'مكتمل' ? 'var(--status-completed)' : 'var(--status-open)'};">
               <div class="flex justify-between items-center mb-2">
                 <div class="flex items-center gap-3">
@@ -270,115 +271,115 @@ export function renderCaseDetail(container, params = {}) {
               ${d.completionNote ? `<div class="text-sm mt-2" style="background: var(--bg-tertiary); padding: var(--space-3); border-radius: var(--radius-sm);">ملاحظة الإكمال: ${d.completionNote}</div>` : ''}
             </div>
           `;
-    }).join('')}
+  }).join('')}
       </div>
     </div>
   `;
 
-    // Tab switching
-    container.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            container.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
-        });
+  // Tab switching
+  container.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      container.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
     });
+  });
 
-    // Add Session
-    container.querySelector('#add-session-btn')?.addEventListener('click', () => {
-        openSessionModal(params.id, caseData, users, container, params);
-    });
+  // Add Session
+  container.querySelector('#add-session-btn')?.addEventListener('click', () => {
+    openSessionModal(params.id, caseData, users, container, params);
+  });
 
-    // Create Action (Manual)
-    container.querySelector('#create-action-btn')?.addEventListener('click', () => {
-        const clientId = caseData.primaryClientId || caseData.clientId || '';
-        openCreateActionModal(params.id, clientId, caseData, users, container, params);
-    });
+  // Create Action (Manual)
+  container.querySelector('#create-action-btn')?.addEventListener('click', () => {
+    const clientId = caseData.primaryClientId || caseData.clientId || '';
+    openCreateActionModal(params.id, clientId, caseData, users, container, params);
+  });
 
-    // Edit Session buttons
-    container.querySelectorAll('.edit-session-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const session = Store.getById(ENTITIES.SESSIONS, btn.dataset.id);
-            if (session) openSessionModal(params.id, caseData, users, container, params, session, false);
-        });
+  // Edit Session buttons
+  container.querySelectorAll('.edit-session-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const session = Store.getById(ENTITIES.SESSIONS, btn.dataset.id);
+      if (session) openSessionModal(params.id, caseData, users, container, params, session, false);
     });
+  });
 
-    // Close Session buttons
-    container.querySelectorAll('.close-session-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const session = Store.getById(ENTITIES.SESSIONS, btn.dataset.id);
-            if (session) openSessionModal(params.id, caseData, users, container, params, session, true);
-        });
+  // Close Session buttons
+  container.querySelectorAll('.close-session-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const session = Store.getById(ENTITIES.SESSIONS, btn.dataset.id);
+      if (session) openSessionModal(params.id, caseData, users, container, params, session, true);
     });
+  });
 
-    // Complete Action  (Responsible user OR Partner)
-    container.querySelectorAll('.complete-action-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            openCompleteActionModal(btn.dataset.id, container, params);
-        });
+  // Complete Action  (Responsible user OR Partner)
+  container.querySelectorAll('.complete-action-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openCompleteActionModal(btn.dataset.id, container, params);
     });
+  });
 
-    // Edit Action  (Partner ONLY) — delegates to shared action-modals.js
-    container.querySelectorAll('.edit-action-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            openPartnerEditActionModal(
-                btn.dataset.id,
-                () => renderCaseDetail(container, params)
-            );
-        });
+  // Edit Action  (Partner ONLY) — delegates to shared action-modals.js
+  container.querySelectorAll('.edit-action-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openPartnerEditActionModal(
+        btn.dataset.id,
+        () => renderCaseDetail(container, params)
+      );
     });
+  });
 
-    // Action History toggles
-    container.querySelectorAll('.action-history-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const body = document.getElementById(btn.dataset.target);
-            if (!body) return;
-            const isHidden = body.style.display === 'none';
-            body.style.display = isHidden ? 'block' : 'none';
-            btn.classList.toggle('open', isHidden);
-        });
+  // Action History toggles
+  container.querySelectorAll('.action-history-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const body = document.getElementById(btn.dataset.target);
+      if (!body) return;
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? 'block' : 'none';
+      btn.classList.toggle('open', isHidden);
     });
+  });
 
-    // Sub-task checkboxes
-    container.querySelectorAll('.subtask-check').forEach(cb => {
-        cb.addEventListener('change', () => {
-            const action = Store.getById(ENTITIES.ACTIONS, cb.dataset.actionId);
-            if (action) {
-                const idx = parseInt(cb.dataset.idx);
-                action.subTasks[idx].completed = cb.checked;
-                Store.update(ENTITIES.ACTIONS, action.id, { subTasks: action.subTasks });
-                logAudit(ENTITIES.ACTIONS, action.id, 'update', { subTaskIndex: idx, completed: cb.checked });
-            }
-        });
+  // Sub-task checkboxes
+  container.querySelectorAll('.subtask-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const action = Store.getById(ENTITIES.ACTIONS, cb.dataset.actionId);
+      if (action) {
+        const idx = parseInt(cb.dataset.idx);
+        action.subTasks[idx].completed = cb.checked;
+        Store.update(ENTITIES.ACTIONS, action.id, { subTasks: action.subTasks });
+        logAudit(ENTITIES.ACTIONS, action.id, 'update', { subTaskIndex: idx, completed: cb.checked });
+      }
     });
+  });
 
-    // Add Deadline
-    container.querySelector('#add-deadline-btn')?.addEventListener('click', () => {
-        openDeadlineModal(params.id, users, container, params);
-    });
+  // Add Deadline
+  container.querySelector('#add-deadline-btn')?.addEventListener('click', () => {
+    openDeadlineModal(params.id, users, container, params);
+  });
 
-    // Complete Deadline
-    container.querySelectorAll('.complete-deadline-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            openCompleteDeadlineModal(btn.dataset.id, container, params);
-        });
+  // Complete Deadline
+  container.querySelectorAll('.complete-deadline-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openCompleteDeadlineModal(btn.dataset.id, container, params);
     });
+  });
 }
 
 // ------ MANUAL ACTION CREATION MODAL (Case-Bound) ------
 function openCreateActionModal(caseId, clientId, caseData, users, container, params) {
-    // Only active users with assignable roles appear
-    const assignableUsers = users.filter(u => u.active && ASSIGNABLE_ROLES.includes(u.role));
+  // Only active users with assignable roles appear
+  const assignableUsers = users.filter(u => u.active && ASSIGNABLE_ROLES.includes(u.role));
 
-    const content = `
+  const content = `
     <form id="create-action-form">
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">نوع الإجراء <span class="required">*</span></label>
           <select class="form-select" id="ca-action-type" required>
             <option value="">اختر النوع</option>
-            ${ACTION_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+            ${getActionTypes().map(t => `<option value="${t}">${t}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
@@ -419,67 +420,67 @@ function openCreateActionModal(caseId, clientId, caseData, users, container, par
     </form>
   `;
 
-    const footer = `
+  const footer = `
     <button class="btn btn-primary" id="save-create-action-btn">✓ إنشاء الإجراء</button>
     <button class="btn btn-secondary" onclick="document.getElementById('active-modal')?.remove()">إلغاء</button>
   `;
 
-    openModal('إنشاء إجراء يدوي', content, { footer, large: true });
+  openModal('إنشاء إجراء يدوي', content, { footer, large: true });
 
-    document.getElementById('save-create-action-btn').addEventListener('click', () => {
-        const actionType = document.getElementById('ca-action-type').value;
-        const title = document.getElementById('ca-title').value.trim();
-        const priority = document.getElementById('ca-priority').value;
-        const responsibleUserId = document.getElementById('ca-responsible').value;
-        const dueDate = document.getElementById('ca-due-date').value;
-        const notes = document.getElementById('ca-notes').value.trim();
+  document.getElementById('save-create-action-btn').addEventListener('click', () => {
+    const actionType = document.getElementById('ca-action-type').value;
+    const title = document.getElementById('ca-title').value.trim();
+    const priority = document.getElementById('ca-priority').value;
+    const responsibleUserId = document.getElementById('ca-responsible').value;
+    const dueDate = document.getElementById('ca-due-date').value;
+    const notes = document.getElementById('ca-notes').value.trim();
 
-        const errors = [];
-        if (!actionType) errors.push('نوع الإجراء مطلوب');
-        if (!responsibleUserId) errors.push('المحامي المسؤول مطلوب – يجب اختياره');
+    const errors = [];
+    if (!actionType) errors.push('نوع الإجراء مطلوب');
+    if (!responsibleUserId) errors.push('المحامي المسؤول مطلوب – يجب اختياره');
 
-        if (errors.length > 0) {
-            const errDiv = document.getElementById('ca-errors');
-            errDiv.style.display = 'block';
-            errDiv.innerHTML = errors.join('<br>');
-            return;
-        }
+    if (errors.length > 0) {
+      const errDiv = document.getElementById('ca-errors');
+      errDiv.style.display = 'block';
+      errDiv.innerHTML = errors.join('<br>');
+      return;
+    }
 
-        const actionData = createAction({
-            clientId,
-            caseId,
-            sessionId: '',
-            actionType,
-            title,
-            priority,
-            responsibleUserId,
-            status: 'مفتوح',
-            dueDate,
-            notes
-        });
-
-        const newAction = Store.create(ENTITIES.ACTIONS, actionData);
-        logAudit(ENTITIES.ACTIONS, newAction.id, 'create', {
-            manual: true,
-            actionType,
-            responsibleUserId,
-            caseId
-        });
-
-        showToast(`تم إنشاء الإجراء: ${actionType}`, 'success');
-        closeModal();
-        renderCaseDetail(container, params);
+    const actionData = createAction({
+      clientId,
+      caseId,
+      sessionId: '',
+      actionType,
+      title,
+      priority,
+      responsibleUserId,
+      status: 'مفتوح',
+      dueDate,
+      notes
     });
+
+    const newAction = Store.create(ENTITIES.ACTIONS, actionData);
+    logAudit(ENTITIES.ACTIONS, newAction.id, 'create', {
+      manual: true,
+      actionType,
+      responsibleUserId,
+      caseId
+    });
+
+    showToast(`تم إنشاء الإجراء: ${actionType}`, 'success');
+    closeModal();
+    renderCaseDetail(container, params);
+  });
 }
 
 // ------ SESSION MODAL (with guardrails) ------
 function openSessionModal(caseId, caseData, users, container, params, existingSession = null, forceClose = false) {
-    const isEdit = !!existingSession;
-    const isCriminalInvestigation = caseData.caseType === 'جنائي' && caseData.criminalStageType === 'تحقيقات نيابة';
-    const sessionLabel = isCriminalInvestigation ? 'التحقيق' : 'الجلسة';
-    const isClosing = forceClose;
+  const isEdit = !!existingSession;
+  const isCriminalInvestigation = caseData.caseType === 'جنائي' && caseData.criminalStageType === 'تحقيقات نيابة';
+  const sessionLabel = isCriminalInvestigation ? 'التحقيق' : 'الجلسة';
+  const isClosing = forceClose;
 
-    const content = `
+  const content = `
     <form id="session-modal-form">
       <div class="form-row">
         <div class="form-group">
@@ -499,7 +500,7 @@ function openSessionModal(caseId, caseData, users, container, params, existingSe
         <label class="form-label">نتيجة القرار <span class="required">*</span></label>
         <select class="form-select" id="session-decision" required>
           <option value="">اختر القرار</option>
-          ${DECISION_TYPES.map(d => `<option value="${d}" ${existingSession?.decisionResult === d ? 'selected' : ''}>${d}</option>`).join('')}
+          ${getDecisionTypes().map(d => `<option value="${d}" ${existingSession?.decisionResult === d ? 'selected' : ''}>${d}</option>`).join('')}
         </select>
       </div>
       
@@ -533,203 +534,203 @@ function openSessionModal(caseId, caseData, users, container, params, existingSe
     </form>
   `;
 
-    const saveLabel = isClosing ? '✓ حفظ وإغلاق الجلسة' : (isEdit ? '💾 حفظ' : '✓ حفظ الجلسة وإنشاء الإجراء');
+  const saveLabel = isClosing ? '✓ حفظ وإغلاق الجلسة' : (isEdit ? '💾 حفظ' : '✓ حفظ الجلسة وإنشاء الإجراء');
 
-    const footer = `
+  const footer = `
     <button class="btn btn-primary" id="save-session-btn">${saveLabel}</button>
     <button class="btn btn-secondary" onclick="document.getElementById('active-modal')?.remove()">إلغاء</button>
   `;
 
-    openModal(`${isClosing ? 'إغلاق' : isEdit ? 'تعديل' : 'إضافة'} ${sessionLabel}`, content, { footer, large: true });
+  openModal(`${isClosing ? 'إغلاق' : isEdit ? 'تعديل' : 'إضافة'} ${sessionLabel}`, content, { footer, large: true });
 
-    // Decision change → show/hide next date and closure reason
-    function updateDecisionUI() {
-        const decision = document.getElementById('session-decision').value;
-        const mapping = getMappingForDecision(decision);
-        const preview = document.getElementById('session-action-preview');
-        const previewText = document.getElementById('action-preview-text');
-        const nextDateReq = document.getElementById('next-date-required');
-        const closureGroup = document.getElementById('closure-reason-group');
-        const nextDateGroup = document.getElementById('next-date-group');
+  // Decision change → show/hide next date and closure reason
+  function updateDecisionUI() {
+    const decision = document.getElementById('session-decision').value;
+    const mapping = getMappingForDecision(decision);
+    const preview = document.getElementById('session-action-preview');
+    const previewText = document.getElementById('action-preview-text');
+    const nextDateReq = document.getElementById('next-date-required');
+    const closureGroup = document.getElementById('closure-reason-group');
+    const nextDateGroup = document.getElementById('next-date-group');
 
-        const requiresNext = mapping ? mapping.requiresNextDate : false;
+    const requiresNext = mapping ? mapping.requiresNextDate : false;
 
-        if (mapping) {
-            preview.style.display = 'block';
-            previewText.textContent = `سيتم إنشاء إجراء تلقائي: ${mapping.actionType}`;
-            if (mapping.subTasks?.length > 0) {
-                previewText.textContent += ` (${mapping.subTasks.length} مهام فرعية)`;
-            }
-        } else {
-            preview.style.display = 'none';
-        }
-
-        if (requiresNext) {
-            nextDateGroup.style.display = 'block';
-            nextDateReq.style.display = 'inline';
-            closureGroup.style.display = 'none';
-        } else if (decision) {
-            // Decision exists but doesn't require next date—show closure reason (for closing)
-            nextDateGroup.style.display = 'block';
-            nextDateReq.style.display = 'none';
-            if (isClosing) {
-                closureGroup.style.display = 'block';
-            } else {
-                closureGroup.style.display = 'none';
-            }
-        } else {
-            nextDateGroup.style.display = 'block';
-            nextDateReq.style.display = 'inline';
-            closureGroup.style.display = 'none';
-        }
+    if (mapping) {
+      preview.style.display = 'block';
+      previewText.textContent = `سيتم إنشاء إجراء تلقائي: ${mapping.actionType}`;
+      if (mapping.subTasks?.length > 0) {
+        previewText.textContent += ` (${mapping.subTasks.length} مهام فرعية)`;
+      }
+    } else {
+      preview.style.display = 'none';
     }
 
-    document.getElementById('session-decision').addEventListener('change', updateDecisionUI);
-    // Initialize UI state
-    updateDecisionUI();
+    if (requiresNext) {
+      nextDateGroup.style.display = 'block';
+      nextDateReq.style.display = 'inline';
+      closureGroup.style.display = 'none';
+    } else if (decision) {
+      // Decision exists but doesn't require next date—show closure reason (for closing)
+      nextDateGroup.style.display = 'block';
+      nextDateReq.style.display = 'none';
+      if (isClosing) {
+        closureGroup.style.display = 'block';
+      } else {
+        closureGroup.style.display = 'none';
+      }
+    } else {
+      nextDateGroup.style.display = 'block';
+      nextDateReq.style.display = 'inline';
+      closureGroup.style.display = 'none';
+    }
+  }
 
-    // Save session
-    document.getElementById('save-session-btn').addEventListener('click', () => {
-        const date = document.getElementById('session-date').value;
-        const sessionType = document.getElementById('session-type').value;
-        const decision = document.getElementById('session-decision').value;
-        const nextDate = document.getElementById('session-next-date').value;
-        const closureReason = document.getElementById('session-closure-reason')?.value || '';
-        const notes = document.getElementById('session-notes').value;
+  document.getElementById('session-decision').addEventListener('change', updateDecisionUI);
+  // Initialize UI state
+  updateDecisionUI();
 
-        const errors = [];
-        if (!date) errors.push('تاريخ الجلسة مطلوب');
-        if (!sessionType) errors.push('نوع الجلسة مطلوب');
+  // Save session
+  document.getElementById('save-session-btn').addEventListener('click', () => {
+    const date = document.getElementById('session-date').value;
+    const sessionType = document.getElementById('session-type').value;
+    const decision = document.getElementById('session-decision').value;
+    const nextDate = document.getElementById('session-next-date').value;
+    const closureReason = document.getElementById('session-closure-reason')?.value || '';
+    const notes = document.getElementById('session-notes').value;
 
-        // GUARDRAIL: Cannot close without decision
-        if (isClosing && !decision) {
-            errors.push('لا يمكن إغلاق الجلسة بدون تسجيل القرار/النتيجة');
-        }
-        if (!isClosing && !decision) errors.push('نتيجة القرار مطلوبة');
+    const errors = [];
+    if (!date) errors.push('تاريخ الجلسة مطلوب');
+    if (!sessionType) errors.push('نوع الجلسة مطلوب');
 
-        const mapping = getMappingForDecision(decision);
-        const requiresNextDate = mapping ? mapping.requiresNextDate : false;
+    // GUARDRAIL: Cannot close without decision
+    if (isClosing && !decision) {
+      errors.push('لا يمكن إغلاق الجلسة بدون تسجيل القرار/النتيجة');
+    }
+    if (!isClosing && !decision) errors.push('نتيجة القرار مطلوبة');
 
-        // GUARDRAIL: Adjournment requires NextSessionDate
-        if (requiresNextDate && !nextDate) {
-            errors.push('تاريخ الجلسة التالية مطلوب لهذا النوع من القرار');
-        }
+    const mapping = getMappingForDecision(decision);
+    const requiresNextDate = mapping ? mapping.requiresNextDate : false;
 
-        // GUARDRAIL: No next date → closure reason required (when closing)
-        if (isClosing && !requiresNextDate && decision && !nextDate && !closureReason) {
-            errors.push('يجب اختيار سبب عدم وجود جلسة تالية لإغلاق الجلسة');
-        }
+    // GUARDRAIL: Adjournment requires NextSessionDate
+    if (requiresNextDate && !nextDate) {
+      errors.push('تاريخ الجلسة التالية مطلوب لهذا النوع من القرار');
+    }
 
-        if (errors.length > 0) {
-            const errDiv = document.getElementById('session-form-errors');
-            errDiv.style.display = 'block';
-            errDiv.innerHTML = errors.join('<br>');
-            return;
-        }
+    // GUARDRAIL: No next date → closure reason required (when closing)
+    if (isClosing && !requiresNextDate && decision && !nextDate && !closureReason) {
+      errors.push('يجب اختيار سبب عدم وجود جلسة تالية لإغلاق الجلسة');
+    }
 
-        const sessionStatus = isClosing ? 'مغلق' : (existingSession?.status || 'مفتوح');
+    if (errors.length > 0) {
+      const errDiv = document.getElementById('session-form-errors');
+      errDiv.style.display = 'block';
+      errDiv.innerHTML = errors.join('<br>');
+      return;
+    }
 
-        const sessionData = createSession({
-            caseId,
-            date,
-            sessionType,
-            decisionResult: decision,
-            nextSessionDate: nextDate,
-            status: sessionStatus,
-            closureReason: isClosing ? closureReason : (existingSession?.closureReason || ''),
-            notes
-        });
+    const sessionStatus = isClosing ? 'مغلق' : (existingSession?.status || 'مفتوح');
 
-        let savedSession;
-        if (isEdit) {
-            Store.update(ENTITIES.SESSIONS, existingSession.id, sessionData);
-            logAudit(ENTITIES.SESSIONS, existingSession.id, 'update', sessionData);
-            savedSession = { ...existingSession, ...sessionData };
-        } else {
-            savedSession = Store.create(ENTITIES.SESSIONS, sessionData);
-            logAudit(ENTITIES.SESSIONS, savedSession.id, 'create', sessionData);
-        }
-
-        // GUARDRAIL: Auto-create next session record when NextSessionDate is entered
-        if (nextDate) {
-            // Check if a session already exists for that date on this case
-            const existingNext = Store.query(ENTITIES.SESSIONS, s => s.caseId === caseId && s.date === nextDate && s.id !== savedSession.id);
-            if (existingNext.length === 0) {
-                const nextSessionData = createSession({
-                    caseId,
-                    date: nextDate,
-                    sessionType: sessionType,
-                    decisionResult: '',
-                    nextSessionDate: '',
-                    status: 'مفتوح',
-                    closureReason: '',
-                    notes: 'جلسة تالية – تم إنشاؤها تلقائياً'
-                });
-                const newNext = Store.create(ENTITIES.SESSIONS, nextSessionData);
-                logAudit(ENTITIES.SESSIONS, newNext.id, 'create', { auto: true, fromSession: savedSession.id });
-            }
-        }
-
-        // Auto-create action based on decision mapping
-        let actionCreated = false;
-        if (mapping) {
-            try {
-                // Ensure we don't duplicate the EXACT same action type for this specific session
-                const existingActions = Store.query(ENTITIES.ACTIONS, a => a.sessionId === savedSession.id && a.actionType === mapping.actionType);
-
-                if (existingActions.length === 0) {
-                    const currentCase = Store.getById(ENTITIES.CASES, caseId);
-                    const actionData = createAction({
-                        caseId: caseId,
-                        sessionId: savedSession.id,
-                        actionType: mapping.actionType,
-                        responsibleUserId: currentCase?.ownerId || '',
-                        status: 'مفتوح',
-                        subTasks: mapping.subTasks ? mapping.subTasks.map(st => ({ ...st })) : [],
-                        dueDate: nextDate || '',
-                        notes: mapping.executionProof ? `إثبات التنفيذ المطلوب: ${mapping.executionProof}` : ''
-                    });
-
-                    const newAction = Store.create(ENTITIES.ACTIONS, actionData);
-                    logAudit(ENTITIES.ACTIONS, newAction.id, 'create', { auto: true, decision, sessionId: savedSession.id });
-                    actionCreated = true;
-                    console.log('Action automatically created:', newAction);
-                } else {
-                    console.log('Action of this type already exists for this session, skipping creation.');
-                }
-            } catch (err) {
-                console.error('Error creating action:', err);
-                showToast('حدث خطأ أثناء إنشاء الإجراء التلقائي', 'error');
-            }
-        }
-
-        if (actionCreated) {
-            showToast(`تم ${isClosing ? 'إغلاق' : 'حفظ'} الجلسة وإنشاء إجراء: ${mapping.actionType}`, 'success');
-        } else if (isClosing) {
-            showToast('تم إغلاق الجلسة بنجاح', 'success');
-        } else {
-            showToast('تم حفظ الجلسة', 'success');
-        }
-
-        // Handle "referral to court" – create linked case
-        if (!isEdit && doesDecisionCreateLinkedCase(decision)) {
-            const currentCase = Store.getById(ENTITIES.CASES, caseId);
-            if (currentCase) {
-                showToast('يمكنك الآن إنشاء قضية محكمة مرتبطة من صفحة القضايا', 'info', 5000);
-            }
-        }
-
-        closeModal();
-        renderCaseDetail(container, params);
+    const sessionData = createSession({
+      caseId,
+      date,
+      sessionType,
+      decisionResult: decision,
+      nextSessionDate: nextDate,
+      status: sessionStatus,
+      closureReason: isClosing ? closureReason : (existingSession?.closureReason || ''),
+      notes
     });
+
+    let savedSession;
+    if (isEdit) {
+      Store.update(ENTITIES.SESSIONS, existingSession.id, sessionData);
+      logAudit(ENTITIES.SESSIONS, existingSession.id, 'update', sessionData);
+      savedSession = { ...existingSession, ...sessionData };
+    } else {
+      savedSession = Store.create(ENTITIES.SESSIONS, sessionData);
+      logAudit(ENTITIES.SESSIONS, savedSession.id, 'create', sessionData);
+    }
+
+    // GUARDRAIL: Auto-create next session record when NextSessionDate is entered
+    if (nextDate) {
+      // Check if a session already exists for that date on this case
+      const existingNext = Store.query(ENTITIES.SESSIONS, s => s.caseId === caseId && s.date === nextDate && s.id !== savedSession.id);
+      if (existingNext.length === 0) {
+        const nextSessionData = createSession({
+          caseId,
+          date: nextDate,
+          sessionType: sessionType,
+          decisionResult: '',
+          nextSessionDate: '',
+          status: 'مفتوح',
+          closureReason: '',
+          notes: 'جلسة تالية – تم إنشاؤها تلقائياً'
+        });
+        const newNext = Store.create(ENTITIES.SESSIONS, nextSessionData);
+        logAudit(ENTITIES.SESSIONS, newNext.id, 'create', { auto: true, fromSession: savedSession.id });
+      }
+    }
+
+    // Auto-create action based on decision mapping
+    let actionCreated = false;
+    if (mapping) {
+      try {
+        // Ensure we don't duplicate the EXACT same action type for this specific session
+        const existingActions = Store.query(ENTITIES.ACTIONS, a => a.sessionId === savedSession.id && a.actionType === mapping.actionType);
+
+        if (existingActions.length === 0) {
+          const currentCase = Store.getById(ENTITIES.CASES, caseId);
+          const actionData = createAction({
+            caseId: caseId,
+            sessionId: savedSession.id,
+            actionType: mapping.actionType,
+            responsibleUserId: currentCase?.ownerId || '',
+            status: 'مفتوح',
+            subTasks: mapping.subTasks ? mapping.subTasks.map(st => ({ ...st })) : [],
+            dueDate: nextDate || '',
+            notes: mapping.executionProof ? `إثبات التنفيذ المطلوب: ${mapping.executionProof}` : ''
+          });
+
+          const newAction = Store.create(ENTITIES.ACTIONS, actionData);
+          logAudit(ENTITIES.ACTIONS, newAction.id, 'create', { auto: true, decision, sessionId: savedSession.id });
+          actionCreated = true;
+          console.log('Action automatically created:', newAction);
+        } else {
+          console.log('Action of this type already exists for this session, skipping creation.');
+        }
+      } catch (err) {
+        console.error('Error creating action:', err);
+        showToast('حدث خطأ أثناء إنشاء الإجراء التلقائي', 'error');
+      }
+    }
+
+    if (actionCreated) {
+      showToast(`تم ${isClosing ? 'إغلاق' : 'حفظ'} الجلسة وإنشاء إجراء: ${mapping.actionType}`, 'success');
+    } else if (isClosing) {
+      showToast('تم إغلاق الجلسة بنجاح', 'success');
+    } else {
+      showToast('تم حفظ الجلسة', 'success');
+    }
+
+    // Handle "referral to court" – create linked case
+    if (!isEdit && doesDecisionCreateLinkedCase(decision)) {
+      const currentCase = Store.getById(ENTITIES.CASES, caseId);
+      if (currentCase) {
+        showToast('يمكنك الآن إنشاء قضية محكمة مرتبطة من صفحة القضايا', 'info', 5000);
+      }
+    }
+
+    closeModal();
+    renderCaseDetail(container, params);
+  });
 }
 
 // ------ COMPLETE ACTION MODAL ------
 function openCompleteActionModal(actionId, container, params) {
-    const action = Store.getById(ENTITIES.ACTIONS, actionId);
-    if (!action) return;
+  const action = Store.getById(ENTITIES.ACTIONS, actionId);
+  if (!action) return;
 
-    const content = `
+  const content = `
     <form id="complete-action-form">
       <div class="mb-4">
         <strong>نوع الإجراء:</strong> ${action.actionType}
@@ -750,36 +751,36 @@ function openCompleteActionModal(actionId, container, params) {
     </form>
   `;
 
-    const footer = `
+  const footer = `
     <button class="btn btn-primary" id="confirm-complete-action">✓ تأكيد الإكمال</button>
     <button class="btn btn-secondary" onclick="document.getElementById('active-modal')?.remove()">إلغاء</button>
   `;
 
-    openModal('إكمال الإجراء', content, { footer });
+  openModal('إكمال الإجراء', content, { footer });
 
-    document.getElementById('confirm-complete-action').addEventListener('click', () => {
-        const execDate = document.getElementById('action-exec-date').value;
-        const execDetails = document.getElementById('action-exec-details').value.trim();
+  document.getElementById('confirm-complete-action').addEventListener('click', () => {
+    const execDate = document.getElementById('action-exec-date').value;
+    const execDetails = document.getElementById('action-exec-details').value.trim();
 
-        if (!execDate || !execDetails) {
-            const errDiv = document.getElementById('complete-action-errors');
-            errDiv.style.display = 'block';
-            errDiv.innerHTML = 'تاريخ التنفيذ وتفاصيل التنفيذ مطلوبان';
-            showToast('لا يمكن إكمال الإجراء بدون بيانات التنفيذ', 'error');
-            return;
-        }
+    if (!execDate || !execDetails) {
+      const errDiv = document.getElementById('complete-action-errors');
+      errDiv.style.display = 'block';
+      errDiv.innerHTML = 'تاريخ التنفيذ وتفاصيل التنفيذ مطلوبان';
+      showToast('لا يمكن إكمال الإجراء بدون بيانات التنفيذ', 'error');
+      return;
+    }
 
-        Store.update(ENTITIES.ACTIONS, actionId, {
-            status: 'مكتمل',
-            executionDate: execDate,
-            executionDetails: execDetails
-        });
-        logAudit(ENTITIES.ACTIONS, actionId, 'complete', { executionDate: execDate });
-
-        showToast('تم إكمال الإجراء بنجاح', 'success');
-        closeModal();
-        renderCaseDetail(container, params);
+    Store.update(ENTITIES.ACTIONS, actionId, {
+      status: 'مكتمل',
+      executionDate: execDate,
+      executionDetails: execDetails
     });
+    logAudit(ENTITIES.ACTIONS, actionId, 'complete', { executionDate: execDate });
+
+    showToast('تم إكمال الإجراء بنجاح', 'success');
+    closeModal();
+    renderCaseDetail(container, params);
+  });
 }
 
 // openPartnerEditActionModal is now in pages/actions/action-modals.js (shared module)
@@ -794,7 +795,7 @@ function openCompleteActionModal(actionId, container, params) {
 
 // ------ DEADLINE MODAL ------
 function openDeadlineModal(caseId, users, container, params) {
-    const content = `
+  const content = `
     <form id="deadline-modal-form">
       <div class="form-group">
         <label class="form-label">نوع الموعد النهائي <span class="required">*</span></label>
@@ -824,38 +825,38 @@ function openDeadlineModal(caseId, users, container, params) {
     </form>
   `;
 
-    const footer = `
+  const footer = `
     <button class="btn btn-primary" id="save-deadline-btn">✓ إضافة الموعد</button>
     <button class="btn btn-secondary" onclick="document.getElementById('active-modal')?.remove()">إلغاء</button>
   `;
 
-    openModal('إضافة موعد نهائي', content, { footer });
+  openModal('إضافة موعد نهائي', content, { footer });
 
-    document.getElementById('save-deadline-btn').addEventListener('click', () => {
-        const type = document.getElementById('deadline-type').value;
-        const start = document.getElementById('deadline-start').value;
-        const end = document.getElementById('deadline-end').value;
-        const responsible = document.getElementById('deadline-responsible').value;
+  document.getElementById('save-deadline-btn').addEventListener('click', () => {
+    const type = document.getElementById('deadline-type').value;
+    const start = document.getElementById('deadline-start').value;
+    const end = document.getElementById('deadline-end').value;
+    const responsible = document.getElementById('deadline-responsible').value;
 
-        if (!type || !start || !end || !responsible) {
-            document.getElementById('deadline-form-errors').style.display = 'block';
-            document.getElementById('deadline-form-errors').innerHTML = 'جميع الحقول مطلوبة';
-            return;
-        }
+    if (!type || !start || !end || !responsible) {
+      document.getElementById('deadline-form-errors').style.display = 'block';
+      document.getElementById('deadline-form-errors').innerHTML = 'جميع الحقول مطلوبة';
+      return;
+    }
 
-        const data = createDeadline({ caseId, deadlineType: type, startDate: start, endDate: end, responsibleUserId: responsible });
-        const newDeadline = Store.create(ENTITIES.DEADLINES, data);
-        logAudit(ENTITIES.DEADLINES, newDeadline.id, 'create', data);
+    const data = createDeadline({ caseId, deadlineType: type, startDate: start, endDate: end, responsibleUserId: responsible });
+    const newDeadline = Store.create(ENTITIES.DEADLINES, data);
+    logAudit(ENTITIES.DEADLINES, newDeadline.id, 'create', data);
 
-        showToast('تم إضافة الموعد النهائي', 'success');
-        closeModal();
-        renderCaseDetail(container, params);
-    });
+    showToast('تم إضافة الموعد النهائي', 'success');
+    closeModal();
+    renderCaseDetail(container, params);
+  });
 }
 
 // ------ COMPLETE DEADLINE MODAL ------
 function openCompleteDeadlineModal(deadlineId, container, params) {
-    const content = `
+  const content = `
     <form id="complete-deadline-form">
       <div class="form-group">
         <label class="form-label">ملاحظة الإكمال <span class="required">*</span></label>
@@ -865,27 +866,27 @@ function openCompleteDeadlineModal(deadlineId, container, params) {
     </form>
   `;
 
-    const footer = `
+  const footer = `
     <button class="btn btn-primary" id="confirm-complete-deadline">✓ تأكيد الإكمال</button>
     <button class="btn btn-secondary" onclick="document.getElementById('active-modal')?.remove()">إلغاء</button>
   `;
 
-    openModal('إكمال الموعد النهائي', content, { footer });
+  openModal('إكمال الموعد النهائي', content, { footer });
 
-    document.getElementById('confirm-complete-deadline').addEventListener('click', () => {
-        const note = document.getElementById('deadline-completion-note').value.trim();
-        if (!note) {
-            document.getElementById('deadline-complete-errors').style.display = 'block';
-            document.getElementById('deadline-complete-errors').innerHTML = 'ملاحظة الإكمال مطلوبة';
-            return;
-        }
+  document.getElementById('confirm-complete-deadline').addEventListener('click', () => {
+    const note = document.getElementById('deadline-completion-note').value.trim();
+    if (!note) {
+      document.getElementById('deadline-complete-errors').style.display = 'block';
+      document.getElementById('deadline-complete-errors').innerHTML = 'ملاحظة الإكمال مطلوبة';
+      return;
+    }
 
-        Store.update(ENTITIES.DEADLINES, deadlineId, { status: 'مكتمل', completionNote: note });
-        logAudit(ENTITIES.DEADLINES, deadlineId, 'complete', { completionNote: note });
-        showToast('تم إكمال الموعد النهائي', 'success');
-        closeModal();
-        renderCaseDetail(container, params);
-    });
+    Store.update(ENTITIES.DEADLINES, deadlineId, { status: 'مكتمل', completionNote: note });
+    logAudit(ENTITIES.DEADLINES, deadlineId, 'complete', { completionNote: note });
+    showToast('تم إكمال الموعد النهائي', 'success');
+    closeModal();
+    renderCaseDetail(container, params);
+  });
 }
 
 export default { renderCaseDetail };
