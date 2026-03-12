@@ -1,10 +1,44 @@
 // ========================================
-// PERMISSIONS – Role-based access control
+// PERMISSIONS – Role-based access control + Auth
 // ========================================
 
 import { USER_ROLES_EN } from './models.js';
 
-// Current user state (simulated login)
+// ---- JWT Auth Helpers ----
+
+export function getAuthToken() {
+    return localStorage.getItem('slf_jwt') || null;
+}
+
+export function setAuthToken(token) {
+    localStorage.setItem('slf_jwt', token);
+}
+
+export function clearAuthToken() {
+    localStorage.removeItem('slf_jwt');
+}
+
+export function isAuthenticated() {
+    const token = getAuthToken();
+    if (!token) return false;
+    try {
+        // Decode payload (no verify – server validates on API calls)
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.exp * 1000 > Date.now();
+    } catch {
+        return false;
+    }
+}
+
+export function logout() {
+    clearAuthToken();
+    localStorage.removeItem('slf_current_user');
+    // Full reload so the app re-renders the login screen
+    window.location.href = window.location.pathname + window.location.search;
+}
+
+// ---- Current User ----
+
 let currentUser = null;
 
 export function setCurrentUser(user) {

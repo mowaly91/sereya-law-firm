@@ -154,7 +154,7 @@ body {
 
 #sidebar {
     width: var(--sidebar-width);
-    min-height: 100vh;
+    height: 100vh;
     background: var(--bg-sidebar);
     border-left: 1px solid var(--border-primary);
     position: fixed;
@@ -165,6 +165,7 @@ body {
     backdrop-filter: blur(20px);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 #main-content {

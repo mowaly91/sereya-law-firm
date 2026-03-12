@@ -22,10 +22,18 @@ function createTables() {
             email TEXT,
             phone TEXT,
             active INTEGER DEFAULT 1,
+            password_hash TEXT,
+            invite_token TEXT,
+            invite_token_expires TEXT,
             _createdAt TEXT,
             _updatedAt TEXT,
             _deleted INTEGER DEFAULT 0
         )`);
+
+        // Migrate existing users table to add auth columns if missing
+        db.run(`ALTER TABLE users ADD COLUMN password_hash TEXT`, () => {});
+        db.run(`ALTER TABLE users ADD COLUMN invite_token TEXT`, () => {});
+        db.run(`ALTER TABLE users ADD COLUMN invite_token_expires TEXT`, () => {});
 
         // Clients
         db.run(`CREATE TABLE IF NOT EXISTS clients (
@@ -39,6 +47,8 @@ function createTables() {
             poaDate TEXT,
             attachments TEXT,
             notes TEXT,
+            driveFolderUrl TEXT,
+            driveFolderId TEXT,
             _createdAt TEXT,
             _updatedAt TEXT,
             _deleted INTEGER DEFAULT 0

@@ -3,7 +3,7 @@
 // ========================================
 
 const STORE_PREFIX = 'slf_';
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 function getStoreKey(entity) {
     return STORE_PREFIX + entity;
@@ -19,9 +19,13 @@ async function syncToBackend(method, entity, data = null, id = null) {
         let url = `${API_BASE_URL}/${entity}`;
         if (id && method !== 'POST') url += `/${id}`;
 
+        const token = localStorage.getItem('slf_jwt') || '';
         const options = {
             method: method,
-            headers: { 'Content-Type': 'application/json' }
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            }
         };
         if (data) options.body = JSON.stringify(data);
 
@@ -156,8 +160,10 @@ export const Store = {
     async syncFromServer(entities) {
         try {
             console.log("Syncing from server...");
+            const token = localStorage.getItem('slf_jwt') || '';
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
             for (let entity of entities) {
-                const res = await fetch(`${API_BASE_URL}/${entity}`);
+                const res = await fetch(`${API_BASE_URL}/${entity}`, { headers });
                 if (res.ok) {
                     const data = await res.json();
                     localStorage.setItem(getStoreKey(entity), JSON.stringify(data));

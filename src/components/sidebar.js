@@ -16,9 +16,9 @@ export function renderSidebar() {
   const openDeadlines = Store.count(ENTITIES.DEADLINES, d => d.status === 'مفتوح');
 
   sidebar.innerHTML = `
-    <div class="sidebar-logo flex flex-col items-center gap-2">
-      <img src="/logo-transparent.png" alt="Saryia Logo" style="width: 120px; margin-bottom: -10px;" />
-      <h2 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--accent-primary);">مكتب سرية للمحاماه</h2>
+    <div class="sidebar-logo flex flex-col items-center gap-1">
+      <img src="/logo-transparent.png" alt="Saryia Logo" style="width: 90px; margin-bottom: -6px;" />
+      <h2 style="font-family: var(--font-display); font-size: var(--text-lg); color: var(--accent-primary);">مكتب سرية للمحاماه</h2>
       <div class="logo-sub">نظام إدارة القضايا</div>
     </div>
     

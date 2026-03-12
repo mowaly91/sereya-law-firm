@@ -110,7 +110,9 @@ export function createClient(data) {
         notaryOffice: data.notaryOffice || '',
         poaDate: data.poaDate || '',
         attachments: data.attachments || [],
-        notes: data.notes || ''
+        notes: data.notes || '',
+        driveFolderUrl: data.driveFolderUrl || '',
+        driveFolderId: data.driveFolderId || ''
     };
 }
 

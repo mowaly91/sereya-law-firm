@@ -7,8 +7,10 @@ import { ENTITIES, USER_ROLES, createUser } from '../../data/models.js';
 import { setPageTitle } from '../../main.js';
 import { showToast } from '../../components/toast.js';
 import { openModal, closeModal } from '../../components/modal.js';
-import { isPartner } from '../../data/permissions.js';
+import { isPartner, getAuthToken } from '../../data/permissions.js';
 import { logAudit } from '../../data/audit.js';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 export function renderUserManagement(container) {
     setPageTitle('إدارة المستخدمين');
@@ -52,7 +54,8 @@ export function renderUserManagement(container) {
                 <td><span class="badge ${u.active ? 'badge-active' : 'badge-expired'}">${u.active ? 'نشط' : 'غير نشط'}</span></td>
                 <td>
                   <div class="table-actions">
-                    <button class="btn btn-ghost btn-sm edit-user" data-id="${u.id}"><i class='bx bx-edit'></i></button>
+                    <button class="btn btn-ghost btn-sm edit-user" data-id="${u.id}" title="تعديل"><i class='bx bx-edit'></i></button>
+                    ${u.email ? `<button class="btn btn-ghost btn-sm send-invite" data-id="${u.id}" data-email="${u.email}" title="إرسال دعوة"><i class='bx bx-envelope'></i></button>` : ''}
                   </div>
                 </td>
               </tr>
@@ -71,6 +74,51 @@ export function renderUserManagement(container) {
             if (user) openUserModal(user, container);
         });
     });
+
+    container.querySelectorAll('.send-invite').forEach(btn => {
+        btn.addEventListener('click', () => sendInvite(btn.dataset.id, btn.dataset.email));
+    });
+}
+
+async function sendInvite(userId, email) {
+    const token = getAuthToken();
+    try {
+        const res = await fetch(`${API_BASE}/auth/send-invite`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ userId })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            showToast(data.error || 'فشل إرسال الدعوة', 'error');
+            return;
+        }
+
+        // Show invite link in a modal so admin can copy it
+        const linkHtml = `
+        <div style="margin-bottom: 16px;">
+          <p style="color:var(--text-secondary); margin-bottom: 12px;">
+            ${data.emailSent ? `✅ تم إرسال الدعوة إلى <strong>${email}</strong>` : `⚠️ لم يتم إرسال البريد (SMTP غير مهيأ). انسخ الرابط أدناه وأرسله للمستخدم:`}
+          </p>
+          <div style="background:var(--bg-input); border:1px solid var(--border-primary); border-radius:var(--radius-md); padding:12px; word-break:break-all; font-size:var(--text-xs); color:var(--text-secondary); direction:ltr; text-align:left;">
+            ${data.inviteLink}
+          </div>
+          <button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="navigator.clipboard.writeText('${data.inviteLink}').then(()=>this.textContent='✓ تم النسخ')">
+            <i class='bx bx-copy'></i> نسخ الرابط
+          </button>
+        </div>`;
+
+        openModal('رابط الدعوة', linkHtml, {
+            footer: `<button class="btn btn-primary" onclick="document.getElementById('active-modal')?.remove()">إغلاق</button>`
+        });
+
+    } catch (err) {
+        showToast('تعذر الاتصال بالخادم', 'error');
+    }
 }
 
 function openUserModal(existing, container) {

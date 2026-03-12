@@ -28,5 +28,9 @@ dist-ssr
 
 # Backend
 server/database.sqlite
-.env
+server/credentials.json
+server/setup_passwords.js
+server/test_login.js
+server/test_scan.js
+server/migrate_db.js
 server/node_modules
