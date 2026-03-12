@@ -163,7 +163,29 @@ function createTables() {
         )`);
 
         console.log('Database tables verified/created.');
+        seedInitialUser();
     });
+}
+
+const bcrypt = require('bcryptjs');
+
+async function seedInitialUser() {
+    try {
+        const count = await dbAsync.get('SELECT COUNT(*) as count FROM users WHERE _deleted = 0');
+        if (count.count === 0) {
+            console.log('Seeding initial admin user...');
+            const id = 'admin_' + Date.now().toString(36);
+            const passwordHash = await bcrypt.hash('Serya@2026', 12);
+            await dbAsync.run(
+                `INSERT INTO users (id, name, role, email, active, password_hash, _createdAt, _updatedAt, _deleted) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [id, 'أحمد أحمد سريا', 'شريك', 'ahmed@serya.law', 1, passwordHash, new Date().toISOString(), new Date().toISOString(), 0]
+            );
+            console.log('✅ Initial admin user created: ahmed@serya.law / Serya@2026');
+        }
+    } catch (err) {
+        console.error('Error seeding user:', err);
+    }
 }
 
 // Wrapper for async queries
