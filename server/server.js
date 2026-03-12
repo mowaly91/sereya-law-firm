@@ -81,6 +81,17 @@ app.use('/api/deadlines', authMiddleware, generateCrudRoutes('deadlines'));
 app.use('/api/lookups', authMiddleware, generateCrudRoutes('lookup_mappings'));
 app.use('/api/audit', authMiddleware, generateCrudRoutes('audit_logs'));
 
+const path = require('path');
+
+// Serve built frontend static files
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+
+// SPA fallback – serve index.html for all non-API routes
+app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+});
+
 // Start Server
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
