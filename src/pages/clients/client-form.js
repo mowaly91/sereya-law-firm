@@ -118,37 +118,56 @@ export function renderClientForm(container, params = {}) {
     window.location.hash = '/clients';
   });
 
-  // Handle Sync Drive if button exists
+  // Handle Sync Drive logic
   const btnSync = container.querySelector('#btn-sync-drive');
-  if (btnSync) {
-    btnSync.addEventListener('click', async () => {
-      const originalText = btnSync.innerHTML;
-      btnSync.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> جاري المسح...";
+  
+  async function performSync(autoTriggered = false) {
+    if (!client?.driveFolderId) return;
+    
+    const originalText = btnSync ? btnSync.innerHTML : '';
+    if (btnSync) {
+      btnSync.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> جاري المزامنة...";
       btnSync.disabled = true;
+    }
 
-      try {
-        const API_BASE = 'http://localhost:3000/api';
-        const res = await fetch(`${API_BASE}/sync-drive?folderId=${encodeURIComponent(client.driveFolderId)}`);
-        const data = await res.json();
+    try {
+      const API_BASE = 'http://localhost:3000/api';
+      const res = await fetch(`${API_BASE}/sync-drive?folderId=${encodeURIComponent(client.driveFolderId)}`);
+      const data = await res.json();
 
-        if (!res.ok) throw new Error(data.error || 'حدث خطأ أثناء المزامنة');
+      if (!res.ok) throw new Error(data.error || 'حدث خطأ أثناء المزامنة');
 
-        if (data.nationalId) {
-          document.getElementById('client-national-id').value = data.nationalId;
-          showToast('تم العثور على الرقم القومي من ملفات درايف! قم بحفظ التعديلات.', 'success');
-          // Hide button since we found it
-          btnSync.style.display = 'none';
-        } else {
+      if (data.nationalId) {
+        document.getElementById('client-national-id').value = data.nationalId;
+        showToast('تم العثور على الرقم القومي تلقائياً من ملفات درايف!', 'success');
+        if (btnSync) btnSync.style.display = 'none';
+      } else {
+        // Only show warning if user clicked the button manually, 
+        // don't annoy them if it was an automatic sync that failed.
+        if (!autoTriggered) {
           showToast('لم يتم العثور على رقم قومي في صور المجلد.', 'warning');
         }
-      } catch (err) {
-        console.error(err);
-        showToast(err.message, 'error');
-      } finally {
+      }
+    } catch (err) {
+      console.error(err);
+      if (!autoTriggered) showToast(err.message, 'error');
+    } finally {
+      if (btnSync) {
         btnSync.innerHTML = originalText;
         btnSync.disabled = false;
       }
+    }
+  }
+
+  if (btnSync) {
+    btnSync.addEventListener('click', () => {
+      performSync(false); // Manual trigger
     });
+
+    // Automatic trigger: if editing and nationalId is missing
+    if (isEdit && !client?.nationalId) {
+      performSync(true); // Automatic trigger
+    }
   }
 }
 

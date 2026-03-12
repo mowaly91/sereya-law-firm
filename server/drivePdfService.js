@@ -98,7 +98,7 @@ async function extractIdFromFolderContents(drive, folderId) {
         const listResponse = await drive.files.list({
             q: `'${folderId}' in parents and (mimeType contains 'image/' or mimeType='application/pdf') and trashed=false`,
             fields: 'files(id, name, mimeType)',
-            pageSize: 10
+            pageSize: 50 // Increased from 10 to 50 to ensure we find ID images in large folders
         });
 
         const files = listResponse.data.files || [];
@@ -107,11 +107,11 @@ async function extractIdFromFolderContents(drive, folderId) {
         let imageFiles = files.filter(f => f.mimeType.startsWith('image/'));
         
         // Try to find files that match ID keywords
-        const keywords = ['بطاقة', 'بطاقه', 'id', 'رقم', 'قومي', 'وجه', 'ظهر'];
+        const keywords = ['بطاقة', 'بطاقه', 'البطاقة', 'البطاقه', 'id', 'رقم', 'قومي', 'قومى', 'وجه', 'ظهر', 'national'];
         let likelyIdFiles = imageFiles.filter(f => keywords.some(k => f.name.toLowerCase().includes(k)));
         
-        // If no keyword matches, just take the first 3 images at most to avoid endless scanning
-        let filesToScan = likelyIdFiles.length > 0 ? likelyIdFiles : imageFiles.slice(0, 3);
+        // Limit to scan up to 5 images to increase chances of finding the ID
+        let filesToScan = likelyIdFiles.length > 0 ? likelyIdFiles.slice(0, 5) : imageFiles.slice(0, 5);
 
         for (const file of filesToScan) {
             console.log(`Downloading and OCR scanning image: ${file.name}`);
@@ -120,9 +120,19 @@ async function extractIdFromFolderContents(drive, folderId) {
                 const text = await performOcrOnImageBuffer(buffer);
 
                 // Look for 14-digit Egyptian National ID in the OCR text
-                const idMatch = text.match(/(?<!\d)(\d{14})(?!\d)/);
+                // We strip all non-numeric characters first to handle cases where OCR adds spaces or noise
+                const digitsOnly = text.replace(/\D/g, '');
+                const idMatch = digitsOnly.match(/\d{14}/);
+                
                 if (idMatch) {
-                    return idMatch[1]; // Found it!
+                    console.log(`Successfully extracted ID: ${idMatch[0]}`);
+                    return idMatch[0]; // Found it!
+                }
+
+                // Fallback: search for 14 digits in raw text in case digitsOnly stripping is too aggressive
+                const rawMatch = text.match(/(?<!\d)(\d{14})(?!\d)/);
+                if (rawMatch) {
+                    return rawMatch[1];
                 }
             }
         }
