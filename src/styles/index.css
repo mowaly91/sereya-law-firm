@@ -150,6 +150,8 @@ body {
     display: flex;
     min-height: 100vh;
     position: relative;
+    overflow-x: hidden;
+    width: 100%;
 }
 
 #sidebar {
@@ -161,7 +163,7 @@ body {
     right: 0;
     top: 0;
     z-index: 100;
-    transition: width var(--transition-base);
+    transition: width var(--transition-base), transform var(--transition-base);
     backdrop-filter: blur(20px);
     display: flex;
     flex-direction: column;
