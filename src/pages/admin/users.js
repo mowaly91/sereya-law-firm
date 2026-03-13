@@ -31,6 +31,13 @@ export function renderUserManagement(container) {
         </div>
         <button class="btn btn-primary" id="add-user-btn"><i class='bx bx-plus'></i> إضافة مستخدم</button>
       </div>
+
+      <div class="card" style="margin-bottom:16px; padding:14px 18px; background:var(--bg-card); border:1px solid var(--border-primary); border-radius:var(--radius-md);">
+        <div style="display:flex; align-items:center; gap:10px; color:var(--text-secondary); font-size:var(--text-sm);">
+          <i class='bx bx-info-circle' style="font-size:18px; color:var(--accent-primary);"></i>
+          <span>لإضافة مستخدم جديد: أضف المستخدم وعيّن له كلمة مرور مباشرةً. المستخدم يمكنه تغيير كلمة مروره بعد تسجيل الدخول من أيقونة حسابه في الشريط العلوي.</span>
+        </div>
+      </div>
       
       <div class="table-container">
         <table class="data-table">
@@ -41,6 +48,7 @@ export function renderUserManagement(container) {
               <th>البريد الإلكتروني</th>
               <th>الهاتف</th>
               <th>الحالة</th>
+              <th>كلمة المرور</th>
               <th>إجراءات</th>
             </tr>
           </thead>
@@ -53,9 +61,13 @@ export function renderUserManagement(container) {
                 <td>${u.phone || '—'}</td>
                 <td><span class="badge ${u.active ? 'badge-active' : 'badge-expired'}">${u.active ? 'نشط' : 'غير نشط'}</span></td>
                 <td>
+                  <button class="btn btn-ghost btn-sm set-password-btn" data-id="${u.id}" data-name="${u.name}" title="تعيين كلمة مرور">
+                    <i class='bx bx-key'></i> تعيين كلمة مرور
+                  </button>
+                </td>
+                <td>
                   <div class="table-actions">
                     <button class="btn btn-ghost btn-sm edit-user" data-id="${u.id}" title="تعديل"><i class='bx bx-edit'></i></button>
-                    ${u.email ? `<button class="btn btn-ghost btn-sm send-invite" data-id="${u.id}" data-email="${u.email}" title="إرسال دعوة"><i class='bx bx-envelope'></i></button>` : ''}
                   </div>
                 </td>
               </tr>
@@ -75,52 +87,87 @@ export function renderUserManagement(container) {
         });
     });
 
-    container.querySelectorAll('.send-invite').forEach(btn => {
-        btn.addEventListener('click', () => sendInvite(btn.dataset.id, btn.dataset.email));
+    container.querySelectorAll('.set-password-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            openAdminSetPasswordModal(btn.dataset.id, btn.dataset.name);
+        });
     });
 }
 
-async function sendInvite(userId, email) {
-    const token = getAuthToken();
-    try {
-        const res = await fetch(`${API_BASE}/auth/send-invite`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify({ userId })
-        });
-        const data = await res.json();
+// ── Admin Set Password Modal ─────────────────────────────────────────────────
+async function openAdminSetPasswordModal(userId, userName) {
+    const content = `
+    <div style="margin-bottom:12px; color:var(--text-secondary); font-size:var(--text-sm);">
+      تعيين كلمة مرور جديدة للمستخدم: <strong style="color:var(--text-primary);">${userName}</strong>
+    </div>
+    <div class="form-group">
+      <label class="form-label">كلمة المرور الجديدة <span class="required">*</span></label>
+      <input type="password" class="form-input" id="adm-pw" placeholder="8 أحرف على الأقل" autocomplete="new-password" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">تأكيد كلمة المرور <span class="required">*</span></label>
+      <input type="password" class="form-input" id="adm-pw-confirm" placeholder="••••••••" autocomplete="new-password" />
+    </div>
+    <div id="adm-pw-error" class="form-error" style="display:none;"></div>
+  `;
 
-        if (!res.ok) {
-            showToast(data.error || 'فشل إرسال الدعوة', 'error');
+    const footer = `
+    <button class="btn btn-primary" id="adm-pw-save"><i class='bx bx-check'></i> تعيين كلمة المرور</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('active-modal')?.remove()">إلغاء</button>
+  `;
+
+    openModal('تعيين كلمة مرور', content, { footer });
+
+    document.getElementById('adm-pw-save').addEventListener('click', async () => {
+        const pw = document.getElementById('adm-pw').value;
+        const pw2 = document.getElementById('adm-pw-confirm').value;
+        const errEl = document.getElementById('adm-pw-error');
+        errEl.style.display = 'none';
+
+        if (!pw || pw.length < 8) {
+            errEl.textContent = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+            errEl.style.display = 'block';
+            return;
+        }
+        if (pw !== pw2) {
+            errEl.textContent = 'كلمتا المرور غير متطابقتين';
+            errEl.style.display = 'block';
             return;
         }
 
-        // Show invite link in a modal so admin can copy it
-        const linkHtml = `
-        <div style="margin-bottom: 16px;">
-          <p style="color:var(--text-secondary); margin-bottom: 12px;">
-            ${data.emailSent ? `✅ تم إرسال الدعوة إلى <strong>${email}</strong>` : `⚠️ لم يتم إرسال البريد (SMTP غير مهيأ). انسخ الرابط أدناه وأرسله للمستخدم:`}
-          </p>
-          <div style="background:var(--bg-input); border:1px solid var(--border-primary); border-radius:var(--radius-md); padding:12px; word-break:break-all; font-size:var(--text-xs); color:var(--text-secondary); direction:ltr; text-align:left;">
-            ${data.inviteLink}
-          </div>
-          <button class="btn btn-secondary btn-sm" style="margin-top:10px;" onclick="navigator.clipboard.writeText('${data.inviteLink}').then(()=>this.textContent='✓ تم النسخ')">
-            <i class='bx bx-copy'></i> نسخ الرابط
-          </button>
-        </div>`;
+        const btn = document.getElementById('adm-pw-save');
+        btn.disabled = true;
+        btn.textContent = 'جارٍ الحفظ...';
 
-        openModal('رابط الدعوة', linkHtml, {
-            footer: `<button class="btn btn-primary" onclick="document.getElementById('active-modal')?.remove()">إغلاق</button>`
-        });
-
-    } catch (err) {
-        showToast('تعذر الاتصال بالخادم', 'error');
-    }
+        try {
+            const res = await fetch(`${API_BASE}/auth/admin-set-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getAuthToken()}`
+                },
+                body: JSON.stringify({ userId, password: pw })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                errEl.textContent = data.error || 'حدث خطأ';
+                errEl.style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = '<i class=\'bx bx-check\'></i> تعيين كلمة المرور';
+                return;
+            }
+            showToast(`✅ تم تعيين كلمة مرور ${userName} بنجاح`, 'success');
+            closeModal();
+        } catch {
+            errEl.textContent = 'تعذر الاتصال بالخادم';
+            errEl.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '<i class=\'bx bx-check\'></i> تعيين كلمة المرور';
+        }
+    });
 }
 
+// ── User Create / Edit Modal ─────────────────────────────────────────────────
 function openUserModal(existing, container) {
     const isEdit = !!existing;
 
@@ -153,40 +200,97 @@ function openUserModal(existing, container) {
           <span>مستخدم نشط</span>
         </label>
       </div>
-      ` : ''}
+      ` : `
+      <div style="background:var(--bg-input); border:1px solid var(--border-primary); border-radius:var(--radius-md); padding:14px; margin-top:4px;">
+        <div style="font-size:var(--text-sm); font-weight:600; color:var(--text-primary); margin-bottom:10px;">
+          <i class='bx bx-key'></i> كلمة المرور الأولية
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">كلمة المرور <span class="required">*</span></label>
+            <input type="password" class="form-input" id="user-password" placeholder="8 أحرف على الأقل" autocomplete="new-password" />
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">تأكيد كلمة المرور <span class="required">*</span></label>
+            <input type="password" class="form-input" id="user-password-confirm" placeholder="••••••••" autocomplete="new-password" />
+          </div>
+        </div>
+      </div>
+      `}
+      <div id="user-form-error" class="form-error" style="display:none; margin-top:8px;"></div>
     </form>
   `;
 
     const footer = `
-    <button class="btn btn-primary" id="save-user">${isEdit ? '💾 حفظ' : '✓ إضافة'}</button>
+    <button class="btn btn-primary" id="save-user">${isEdit ? '💾 حفظ' : '✓ إضافة المستخدم'}</button>
     <button class="btn btn-secondary" onclick="document.getElementById('active-modal')?.remove()">إلغاء</button>
   `;
 
-    openModal(isEdit ? 'تعديل المستخدم' : 'إضافة مستخدم', content, { footer });
+    openModal(isEdit ? 'تعديل المستخدم' : 'إضافة مستخدم جديد', content, { footer });
 
-    document.getElementById('save-user').addEventListener('click', () => {
-        const data = createUser({
-            name: document.getElementById('user-name').value.trim(),
-            role: document.getElementById('user-role').value,
-            email: document.getElementById('user-email').value.trim(),
-            phone: document.getElementById('user-phone').value.trim(),
-            active: isEdit ? document.getElementById('user-active')?.checked : true
-        });
+    document.getElementById('save-user').addEventListener('click', async () => {
+        const errEl = document.getElementById('user-form-error');
+        errEl.style.display = 'none';
 
-        if (!data.name) {
-            showToast('اسم المستخدم مطلوب', 'error');
+        const name = document.getElementById('user-name').value.trim();
+        const role = document.getElementById('user-role').value;
+        const email = document.getElementById('user-email').value.trim();
+        const phone = document.getElementById('user-phone').value.trim();
+        const active = isEdit ? document.getElementById('user-active')?.checked : true;
+
+        if (!name) {
+            errEl.textContent = 'اسم المستخدم مطلوب';
+            errEl.style.display = 'block';
             return;
         }
 
-        if (isEdit) {
-            Store.update(ENTITIES.USERS, existing.id, data);
-            logAudit(ENTITIES.USERS, existing.id, 'update', data);
-        } else {
+        // For new users: validate password
+        if (!isEdit) {
+            const pw = document.getElementById('user-password').value;
+            const pw2 = document.getElementById('user-password-confirm').value;
+            if (!pw || pw.length < 8) {
+                errEl.textContent = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+                errEl.style.display = 'block';
+                return;
+            }
+            if (pw !== pw2) {
+                errEl.textContent = 'كلمتا المرور غير متطابقتين';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            // Create user first then set password
+            const data = createUser({ name, role, email, phone, active: true });
             const newUser = Store.create(ENTITIES.USERS, data);
             logAudit(ENTITIES.USERS, newUser.id, 'create', data);
+
+            // Now set the password via API
+            try {
+                const res = await fetch(`${API_BASE}/auth/admin-set-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({ userId: newUser.id, password: pw })
+                });
+                if (!res.ok) {
+                    const d = await res.json();
+                    showToast(`تم إنشاء المستخدم لكن فشل تعيين كلمة المرور: ${d.error}`, 'warning');
+                } else {
+                    showToast(`✅ تم إضافة ${name} وتعيين كلمة مروره بنجاح`, 'success');
+                }
+            } catch {
+                showToast('تم إنشاء المستخدم لكن تعذر الاتصال بالخادم لتعيين كلمة المرور', 'warning');
+            }
+        } else {
+            // Edit existing user
+            const data = createUser({ name, role, email, phone, active });
+            Store.update(ENTITIES.USERS, existing.id, data);
+            logAudit(ENTITIES.USERS, existing.id, 'update', data);
+            showToast('تم تحديث المستخدم', 'success');
         }
 
-        showToast(isEdit ? 'تم تحديث المستخدم' : 'تم إضافة المستخدم', 'success');
         closeModal();
         renderUserManagement(container);
     });

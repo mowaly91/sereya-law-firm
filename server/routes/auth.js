@@ -188,4 +188,93 @@ router.post('/send-invite', async (req, res) => {
     }
 });
 
+// ---- POST /api/auth/admin-set-password ----
+// Allows a partner/admin to set any user's password directly (no email needed)
+router.post('/admin-set-password', async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'] || '';
+        const token = authHeader.replace('Bearer ', '');
+        if (!token) return res.status(401).json({ error: 'غير مصرح' });
+
+        let caller;
+        try {
+            caller = jwt.verify(token, JWT_SECRET);
+        } catch {
+            return res.status(401).json({ error: 'رمز المصادقة غير صالح' });
+        }
+
+        // Only partners can set other users' passwords
+        if (caller.role !== 'شريك') {
+            return res.status(403).json({ error: 'هذه العملية متاحة للشركاء فقط' });
+        }
+
+        const { userId, password } = req.body;
+        if (!userId || !password) {
+            return res.status(400).json({ error: 'معرف المستخدم وكلمة المرور مطلوبان' });
+        }
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' });
+        }
+
+        const user = await dbAsync.get(`SELECT * FROM users WHERE id = ? AND _deleted = 0`, [userId]);
+        if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
+
+        const hash = await bcrypt.hash(password, 12);
+        await dbAsync.run(
+            `UPDATE users SET password_hash = ?, invite_token = NULL, invite_token_expires = NULL, _updatedAt = ? WHERE id = ?`,
+            [hash, new Date().toISOString(), userId]
+        );
+
+        res.json({ success: true, message: 'تم تعيين كلمة المرور بنجاح' });
+    } catch (err) {
+        console.error('Admin-set-password error:', err);
+        res.status(500).json({ error: 'خطأ في الخادم' });
+    }
+});
+
+// ---- POST /api/auth/change-password ----
+// Allows any authenticated user to change their own password
+router.post('/change-password', async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'] || '';
+        const token = authHeader.replace('Bearer ', '');
+        if (!token) return res.status(401).json({ error: 'غير مصرح' });
+
+        let caller;
+        try {
+            caller = jwt.verify(token, JWT_SECRET);
+        } catch {
+            return res.status(401).json({ error: 'رمز المصادقة غير صالح' });
+        }
+
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'كلمة المرور الحالية والجديدة مطلوبتان' });
+        }
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل' });
+        }
+
+        const user = await dbAsync.get(`SELECT * FROM users WHERE id = ? AND _deleted = 0`, [caller.id]);
+        if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
+
+        // Verify current password — but allow if no password is set yet (first-time setup)
+        if (user.password_hash) {
+            const valid = await bcrypt.compare(currentPassword, user.password_hash);
+            if (!valid) return res.status(401).json({ error: 'كلمة المرور الحالية غير صحيحة' });
+        }
+
+        const hash = await bcrypt.hash(newPassword, 12);
+        await dbAsync.run(
+            `UPDATE users SET password_hash = ?, _updatedAt = ? WHERE id = ?`,
+            [hash, new Date().toISOString(), caller.id]
+        );
+
+        res.json({ success: true, message: 'تم تغيير كلمة المرور بنجاح' });
+    } catch (err) {
+        console.error('Change-password error:', err);
+        res.status(500).json({ error: 'خطأ في الخادم' });
+    }
+});
+
 module.exports = router;

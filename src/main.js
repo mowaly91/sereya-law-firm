@@ -4,7 +4,7 @@
 
 import { registerRoute, initRouter, navigate } from './router.js';
 import { seedIfEmpty } from './data/seed.js';
-import { getCurrentUser, setCurrentUser, isAuthenticated, logout } from './data/permissions.js';
+import { getCurrentUser, setCurrentUser, isAuthenticated, logout, getAuthToken } from './data/permissions.js';
 import Store from './data/store.js';
 import { ENTITIES } from './data/models.js';
 import { renderSidebar } from './components/sidebar.js';
@@ -25,6 +25,7 @@ import { initNotificationEngine } from './components/notification.js';
 import { renderClientImport } from './pages/clients/client-import.js';
 import { renderLogin } from './pages/auth/login.js';
 import { renderSetPassword } from './pages/auth/set-password.js';
+import { openModal, closeModal } from './components/modal.js';
 
 // Initialize
 async function init() {
@@ -134,8 +135,12 @@ function renderTopbar() {
     </div>
     <div class="topbar-actions">
       <div class="flex items-center gap-2">
-        <span class="text-sm text-secondary topbar-username">${user ? user.name : ''}</span>
+        <span class="text-sm text-secondary topbar-username hidden-mobile">${user ? user.name : ''}</span>
         <span class="badge badge-open" style="font-size:var(--text-xs);">${user ? user.role : ''}</span>
+        <button id="change-pw-btn" class="btn btn-ghost btn-sm" title="تغيير كلمة المرور" style="display:flex;align-items:center;gap:4px;">
+          <i class='bx bx-key'></i>
+          <span class="hidden-mobile">حسابي</span>
+        </button>
         <button id="logout-btn" class="btn btn-ghost btn-sm" title="تسجيل الخروج" style="display:flex;align-items:center;gap:4px;">
           <i class='bx bx-log-out'></i>
           <span class="hidden-mobile">خروج</span>
@@ -149,9 +154,88 @@ function renderTopbar() {
     if (confirm('هل تريد تسجيل الخروج؟')) logout();
   });
 
+  // Change password
+  topbar.querySelector('#change-pw-btn').addEventListener('click', openChangePasswordModal);
+
   // Mobile hamburger
   const menuBtn = document.getElementById('mobile-menu-btn');
   menuBtn.addEventListener('click', toggleMobileSidebar);
+}
+
+const API_BASE_MAIN = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+
+function openChangePasswordModal() {
+  const content = `
+      <p style="color:var(--text-secondary); font-size:var(--text-sm); margin-bottom:16px;">
+        يمكنك تغيير كلمة مرور حسابك من هنا. إذا كانت هذه أول مرة تغير فيها كلمة المرور، أدخل كلمة المرور التي عيّنها لك المسؤول في خانة "كلمة المرور الحالية".
+      </p>
+      <div class="form-group">
+        <label class="form-label">كلمة المرور الحالية <span class="required">*</span></label>
+        <input type="password" class="form-input" id="cp-current" placeholder="كلمة مرورك الحالية" autocomplete="current-password" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">كلمة المرور الجديدة <span class="required">*</span></label>
+        <input type="password" class="form-input" id="cp-new" placeholder="8 أحرف على الأقل" autocomplete="new-password" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">تأكيد كلمة المرور الجديدة <span class="required">*</span></label>
+        <input type="password" class="form-input" id="cp-confirm" placeholder="••••••••" autocomplete="new-password" />
+      </div>
+      <div id="cp-error" class="form-error" style="display:none;"></div>
+      <div id="cp-success" class="form-success" style="display:none; color:var(--color-success, #10b981); background:rgba(16,185,129,0.1); border-radius:var(--radius-md); padding:10px 14px; margin-top:8px;"></div>
+    `;
+    const footer = `
+      <button class="btn btn-primary" id="cp-save-btn"><i class='bx bx-check'></i> تغيير كلمة المرور</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('active-modal')?.remove()">إلغاء</button>
+    `;
+    openModal('تغيير كلمة المرور', content, { footer });
+
+    document.getElementById('cp-save-btn').addEventListener('click', async () => {
+      const errEl = document.getElementById('cp-error');
+      const successEl = document.getElementById('cp-success');
+      errEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      const currentPw = document.getElementById('cp-current').value;
+      const newPw = document.getElementById('cp-new').value;
+      const confirmPw = document.getElementById('cp-confirm').value;
+
+      if (!currentPw) { errEl.textContent = 'أدخل كلمة المرور الحالية'; errEl.style.display = 'block'; return; }
+      if (!newPw || newPw.length < 8) { errEl.textContent = 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل'; errEl.style.display = 'block'; return; }
+      if (newPw !== confirmPw) { errEl.textContent = 'كلمتا المرور غير متطابقتين'; errEl.style.display = 'block'; return; }
+
+      const btn = document.getElementById('cp-save-btn');
+      btn.disabled = true;
+      btn.textContent = 'جارٍ الحفظ...';
+
+      try {
+        const res = await fetch(`${API_BASE_MAIN}/auth/change-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getAuthToken()}`
+          },
+          body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errEl.textContent = data.error || 'حدث خطأ';
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.innerHTML = `<i class='bx bx-check'></i> تغيير كلمة المرور`;
+          return;
+        }
+        successEl.innerHTML = `<i class='bx bx-check-circle'></i> ✅ تم تغيير كلمة المرور بنجاح!`;
+        successEl.style.display = 'block';
+        btn.style.display = 'none';
+        setTimeout(() => closeModal(), 2000);
+      } catch {
+        errEl.textContent = 'تعذر الاتصال بالخادم';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = `<i class='bx bx-check'></i> تغيير كلمة المرور`;
+      }
+    });
 }
 
 // ---- Mobile sidebar helpers ----
