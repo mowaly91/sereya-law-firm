@@ -1,178 +1,21 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-
-// Connect to SQLite database
-const dbPath = path.resolve(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error opening database', err.message);
-    } else {
-        console.log('Connected to SQLite database.');
-        createTables();
-    }
-});
-
-function createTables() {
-    db.serialize(() => {
-        // Users
-        db.run(`CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            role TEXT,
-            email TEXT,
-            phone TEXT,
-            active INTEGER DEFAULT 1,
-            password_hash TEXT,
-            invite_token TEXT,
-            invite_token_expires TEXT,
-            _createdAt TEXT,
-            _updatedAt TEXT,
-            _deleted INTEGER DEFAULT 0
-        )`);
-
-        // Migrate existing users table to add auth columns if missing
-        db.run(`ALTER TABLE users ADD COLUMN password_hash TEXT`, () => {});
-        db.run(`ALTER TABLE users ADD COLUMN invite_token TEXT`, () => {});
-        db.run(`ALTER TABLE users ADD COLUMN invite_token_expires TEXT`, () => {});
-
-        // Clients
-        db.run(`CREATE TABLE IF NOT EXISTS clients (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            nationalId TEXT,
-            phone TEXT,
-            address TEXT,
-            poaNumber TEXT,
-            notaryOffice TEXT,
-            poaDate TEXT,
-            attachments TEXT,
-            notes TEXT,
-            driveFolderUrl TEXT,
-            driveFolderId TEXT,
-            _createdAt TEXT,
-            _updatedAt TEXT,
-            _deleted INTEGER DEFAULT 0
-        )`);
-
-        // Cases
-        db.run(`CREATE TABLE IF NOT EXISTS cases (
-            id TEXT PRIMARY KEY,
-            caseNo TEXT,
-            year TEXT,
-            stageType TEXT,
-            clientId TEXT,
-            clientIds TEXT,
-            primaryClientId TEXT,
-            clientRole TEXT,
-            opponentName TEXT,
-            opponentRole TEXT,
-            court TEXT,
-            circuit TEXT,
-            caseType TEXT,
-            subject TEXT,
-            firstSessionDate TEXT,
-            ownerId TEXT,
-            status TEXT,
-            criminalStageType TEXT,
-            linkedProsecutionId TEXT,
-            notes TEXT,
-            _createdAt TEXT,
-            _updatedAt TEXT,
-            _deleted INTEGER DEFAULT 0
-        )`);
-
-        // Sessions
-        db.run(`CREATE TABLE IF NOT EXISTS sessions (
-            id TEXT PRIMARY KEY,
-            caseId TEXT,
-            date TEXT,
-            sessionType TEXT,
-            decisionResult TEXT,
-            nextSessionDate TEXT,
-            status TEXT,
-            closureReason TEXT,
-            notes TEXT,
-            attachments TEXT,
-            _createdAt TEXT,
-            _updatedAt TEXT,
-            _deleted INTEGER DEFAULT 0
-        )`);
-
-        // Actions
-        db.run(`CREATE TABLE IF NOT EXISTS actions (
-            id TEXT PRIMARY KEY,
-            clientId TEXT,
-            caseId TEXT,
-            sessionId TEXT,
-            actionType TEXT,
-            title TEXT,
-            priority TEXT,
-            responsibleUserId TEXT,
-            status TEXT,
-            executionDate TEXT,
-            executionDetails TEXT,
-            subTasks TEXT,
-            dueDate TEXT,
-            notes TEXT,
-            attachments TEXT,
-            _createdAt TEXT,
-            _updatedAt TEXT,
-            _deleted INTEGER DEFAULT 0
-        )`);
-
-        // Deadlines
-        db.run(`CREATE TABLE IF NOT EXISTS deadlines (
-            id TEXT PRIMARY KEY,
-            caseId TEXT,
-            deadlineType TEXT,
-            startDate TEXT,
-            endDate TEXT,
-            responsibleUserId TEXT,
-            status TEXT,
-            completionNote TEXT,
-            _createdAt TEXT,
-            _updatedAt TEXT,
-            _deleted INTEGER DEFAULT 0
-        )`);
-
-        // Lookups (Decision mappings)
-        db.run(`CREATE TABLE IF NOT EXISTS lookup_mappings (
-            id TEXT PRIMARY KEY,
-            decisionType TEXT,
-            actionTypes TEXT,
-            _createdAt TEXT,
-            _updatedAt TEXT,
-            _deleted INTEGER DEFAULT 0
-        )`);
-
-        // Settings
-        db.run(`CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        )`);
-
-        // Audit Logs
-        db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
-            id TEXT PRIMARY KEY,
-            userId TEXT,
-            action TEXT,
-            entity TEXT,
-            entityId TEXT,
-            details TEXT,
-            _createdAt TEXT
-        )`);
-
-        console.log('Database tables verified/created.');
-        seedInitialUser();
-    });
-}
-
 const bcrypt = require('bcryptjs');
+
+const usePg = !!process.env.DATABASE_URL;
+
+let db;
+let dbAsync = {};
+
+// Helper to convert queries from `?` to `$1`, `$2` etc. for Postgres
+function convertQueryForPg(sql) {
+    let index = 1;
+    return sql.replace(/\?/g, () => '$' + index++);
+}
 
 async function seedInitialUser() {
     try {
-        const count = await dbAsync.get('SELECT COUNT(*) as count FROM users WHERE _deleted = 0');
-        if (count.count === 0) {
+        const countRow = await dbAsync.get('SELECT COUNT(*) as count FROM users WHERE _deleted = 0');
+        const count = parseInt(countRow.count, 10);
+        if (count === 0) {
             console.log('Seeding initial admin user...');
             const id = 'admin_' + Date.now().toString(36);
             const passwordHash = await bcrypt.hash('Serya@2026', 12);
@@ -188,26 +31,193 @@ async function seedInitialUser() {
     }
 }
 
-// Wrapper for async queries
-const dbAsync = {
-    get: (sql, params = []) => new Promise((resolve, reject) => {
+if (usePg) {
+    const { Pool } = require('pg');
+    console.log('Connecting to PostgreSQL database using DATABASE_URL...');
+    db = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }
+    });
+
+    db.on('connect', () => console.log('✅ Connected to PostgreSQL database.'));
+
+    dbAsync.get = async (sql, params = []) => {
+        const res = await db.query(convertQueryForPg(sql), params);
+        return res.rows[0];
+    };
+    dbAsync.all = async (sql, params = []) => {
+        const res = await db.query(convertQueryForPg(sql), params);
+        return res.rows;
+    };
+    dbAsync.run = async (sql, params = []) => {
+        const res = await db.query(convertQueryForPg(sql), params);
+        return { changes: res.rowCount };
+    };
+
+    async function createTablesPg() {
+        try {
+            await db.query(`CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY, name TEXT, role TEXT, email TEXT, phone TEXT,
+                active INTEGER DEFAULT 1, password_hash TEXT, invite_token TEXT,
+                invite_token_expires TEXT, _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+            
+            await db.query(`CREATE TABLE IF NOT EXISTS clients (
+                id TEXT PRIMARY KEY, name TEXT, nationalId TEXT, phone TEXT, address TEXT,
+                poaNumber TEXT, notaryOffice TEXT, poaDate TEXT, attachments TEXT, notes TEXT,
+                driveFolderUrl TEXT, driveFolderId TEXT, _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            await db.query(`CREATE TABLE IF NOT EXISTS cases (
+                id TEXT PRIMARY KEY, caseNo TEXT, year TEXT, stageType TEXT, clientId TEXT,
+                clientIds TEXT, primaryClientId TEXT, clientRole TEXT, opponentName TEXT, opponentRole TEXT,
+                court TEXT, circuit TEXT, caseType TEXT, subject TEXT, firstSessionDate TEXT,
+                ownerId TEXT, status TEXT, criminalStageType TEXT, linkedProsecutionId TEXT,
+                notes TEXT, _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            await db.query(`CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY, caseId TEXT, date TEXT, sessionType TEXT, decisionResult TEXT,
+                nextSessionDate TEXT, status TEXT, closureReason TEXT, notes TEXT, attachments TEXT,
+                _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            await db.query(`CREATE TABLE IF NOT EXISTS actions (
+                id TEXT PRIMARY KEY, clientId TEXT, caseId TEXT, sessionId TEXT, actionType TEXT,
+                title TEXT, priority TEXT, responsibleUserId TEXT, status TEXT, executionDate TEXT,
+                executionDetails TEXT, subTasks TEXT, dueDate TEXT, notes TEXT, attachments TEXT,
+                _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            await db.query(`CREATE TABLE IF NOT EXISTS deadlines (
+                id TEXT PRIMARY KEY, caseId TEXT, deadlineType TEXT, startDate TEXT, endDate TEXT,
+                responsibleUserId TEXT, status TEXT, completionNote TEXT, _createdAt TEXT,
+                _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            await db.query(`CREATE TABLE IF NOT EXISTS lookup_mappings (
+                id TEXT PRIMARY KEY, decisionType TEXT, actionTypes TEXT,
+                _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            await db.query(`CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY, value TEXT
+            )`);
+
+            await db.query(`CREATE TABLE IF NOT EXISTS audit_logs (
+                id TEXT PRIMARY KEY, userId TEXT, action TEXT, entity TEXT, entityId TEXT,
+                details TEXT, _createdAt TEXT
+            )`);
+
+            // Migrate columns IF NOT EXISTS
+            try { await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT`); } catch (e) {}
+            try { await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_token TEXT`); } catch (e) {}
+            try { await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_token_expires TEXT`); } catch (e) {}
+
+            console.log('PostgreSQL Database tables verified/created.');
+            await seedInitialUser();
+        } catch (err) {
+            console.error('PostgreSQL Initialization Error:', err);
+        }
+    }
+    
+    // Automatically init schemas on import.
+    createTablesPg();
+} else {
+    // ----------------------------------------------------
+    // LOCAL SQLITE FALLBACK
+    // ----------------------------------------------------
+    const sqlite3 = require('sqlite3').verbose();
+    const path = require('path');
+    console.log('No DATABASE_URL found. Using local SQLite fallback...');
+
+    const dbPath = path.resolve(__dirname, 'database.sqlite');
+    db = new sqlite3.Database(dbPath, (err) => {
+        if (err) {
+            console.error('Error opening database', err.message);
+        } else {
+            console.log('✅ Connected to local SQLite database.');
+            createTablesSqlite();
+        }
+    });
+
+    dbAsync.get = (sql, params = []) => new Promise((resolve, reject) => {
         db.get(sql, params, (err, result) => {
-            if (err) reject(err);
-            else resolve(result);
+            if (err) reject(err); else resolve(result);
         });
-    }),
-    all: (sql, params = []) => new Promise((resolve, reject) => {
+    });
+    dbAsync.all = (sql, params = []) => new Promise((resolve, reject) => {
         db.all(sql, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
+            if (err) reject(err); else resolve(rows);
         });
-    }),
-    run: (sql, params = []) => new Promise((resolve, reject) => {
+    });
+    dbAsync.run = (sql, params = []) => new Promise((resolve, reject) => {
         db.run(sql, params, function (err) {
-            if (err) reject(err);
-            else resolve(this); // can access this.lastID, this.changes
+            if (err) reject(err); else resolve(this);
         });
-    })
-};
+    });
+
+    function createTablesSqlite() {
+        db.serialize(() => {
+            // Include exactly the same schemas but with SQLite syntax
+            db.run(`CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY, name TEXT, role TEXT, email TEXT, phone TEXT,
+                active INTEGER DEFAULT 1, password_hash TEXT, invite_token TEXT,
+                invite_token_expires TEXT, _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+            db.run(`ALTER TABLE users ADD COLUMN password_hash TEXT`, () => {});
+            db.run(`ALTER TABLE users ADD COLUMN invite_token TEXT`, () => {});
+            db.run(`ALTER TABLE users ADD COLUMN invite_token_expires TEXT`, () => {});
+
+            db.run(`CREATE TABLE IF NOT EXISTS clients (
+                id TEXT PRIMARY KEY, name TEXT, nationalId TEXT, phone TEXT, address TEXT,
+                poaNumber TEXT, notaryOffice TEXT, poaDate TEXT, attachments TEXT, notes TEXT,
+                driveFolderUrl TEXT, driveFolderId TEXT, _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS cases (
+                id TEXT PRIMARY KEY, caseNo TEXT, year TEXT, stageType TEXT, clientId TEXT,
+                clientIds TEXT, primaryClientId TEXT, clientRole TEXT, opponentName TEXT, opponentRole TEXT,
+                court TEXT, circuit TEXT, caseType TEXT, subject TEXT, firstSessionDate TEXT,
+                ownerId TEXT, status TEXT, criminalStageType TEXT, linkedProsecutionId TEXT,
+                notes TEXT, _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY, caseId TEXT, date TEXT, sessionType TEXT, decisionResult TEXT,
+                nextSessionDate TEXT, status TEXT, closureReason TEXT, notes TEXT, attachments TEXT,
+                _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS actions (
+                id TEXT PRIMARY KEY, clientId TEXT, caseId TEXT, sessionId TEXT, actionType TEXT,
+                title TEXT, priority TEXT, responsibleUserId TEXT, status TEXT, executionDate TEXT,
+                executionDetails TEXT, subTasks TEXT, dueDate TEXT, notes TEXT, attachments TEXT,
+                _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS deadlines (
+                id TEXT PRIMARY KEY, caseId TEXT, deadlineType TEXT, startDate TEXT, endDate TEXT,
+                responsibleUserId TEXT, status TEXT, completionNote TEXT, _createdAt TEXT,
+                _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS lookup_mappings (
+                id TEXT PRIMARY KEY, decisionType TEXT, actionTypes TEXT,
+                _createdAt TEXT, _updatedAt TEXT, _deleted INTEGER DEFAULT 0
+            )`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
+
+            db.run(`CREATE TABLE IF NOT EXISTS audit_logs (
+                id TEXT PRIMARY KEY, userId TEXT, action TEXT, entity TEXT, entityId TEXT,
+                details TEXT, _createdAt TEXT
+            )`);
+
+            console.log('SQLite Database tables verified/created.');
+            seedInitialUser();
+        });
+    }
+}
 
 module.exports = { db, dbAsync };
