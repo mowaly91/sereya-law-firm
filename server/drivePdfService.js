@@ -6,21 +6,53 @@ const path = require('path');
 const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
 const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 
+/**
+ * Helper to get the parsed credentials object either from the environment variable 
+ * or from the local credentials.json file.
+ */
+function getCredentials() {
+    if (process.env.GOOGLE_CREDENTIALS) {
+        try {
+            return JSON.parse(process.env.GOOGLE_CREDENTIALS);
+        } catch (err) {
+            console.error("Failed to parse GOOGLE_CREDENTIALS from environment variable.", err);
+        }
+    }
+    
+    if (fs.existsSync(CREDENTIALS_PATH)) {
+        try {
+            return JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
+        } catch (err) {
+            console.error("Failed to read credentials.json.", err);
+        }
+    }
+    
+    return null;
+}
+
+const creds = getCredentials();
+
 // Initialize Vision API client
 let visionClient = null;
-if (fs.existsSync(CREDENTIALS_PATH)) {
+if (creds) {
     visionClient = new vision.ImageAnnotatorClient({
-        keyFilename: CREDENTIALS_PATH
+        credentials: {
+            client_email: creds.client_email,
+            private_key: creds.private_key
+        }
     });
 }
 
 async function getAuth() {
-    if (!fs.existsSync(CREDENTIALS_PATH)) {
-        throw new Error("Missing credentials.json in server folder. Please create a Google Cloud Service Account and download the keys as server/credentials.json.");
+    if (!creds) {
+        throw new Error("Missing Google Credentials. Please provide process.env.GOOGLE_CREDENTIALS or create server/credentials.json.");
     }
 
     const auth = new google.auth.GoogleAuth({
-        keyFile: CREDENTIALS_PATH,
+        credentials: {
+            client_email: creds.client_email,
+            private_key: creds.private_key
+        },
         scopes: SCOPES,
     });
     return auth;
