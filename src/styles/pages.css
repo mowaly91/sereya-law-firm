@@ -701,7 +701,22 @@
 
 @media (max-width: 768px) {
     .dashboard-stats {
-        grid-template-columns: repeat(2, 1fr);
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        gap: var(--space-4);
+        padding-bottom: var(--space-4);
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
+    }
+    
+    .dashboard-stats::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+    }
+
+    .dashboard-stats > .card {
+        flex: 0 0 85%;
+        scroll-snap-align: center;
     }
 
     .dashboard-widgets {
@@ -770,10 +785,6 @@
 }
 
 @media (max-width: 480px) {
-    .dashboard-stats {
-        grid-template-columns: 1fr;
-    }
-
     .case-badges {
         flex-wrap: wrap;
     }
