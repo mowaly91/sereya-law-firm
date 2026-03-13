@@ -97,7 +97,7 @@ export function renderClientImport(container, params = {}) {
 
         loadingOverlay.style.display = 'flex';
         try {
-            const API_BASE = 'http://localhost:3000/api';
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
             const res = await fetch(`${API_BASE}/scan-drive-pdfs?folderId=${encodeURIComponent(folderId)}`);
             const data = await res.json();
 
