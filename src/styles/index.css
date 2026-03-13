@@ -127,7 +127,7 @@ body {
     color: var(--text-primary);
     line-height: 1.6;
     overflow: hidden;
-    min-height: 100vh;
+    min-height: 100dvh;
 }
 
 /* Sidebar Overlay (mobile) */
@@ -148,7 +148,7 @@ body {
 /* App Layout */
 #app {
     display: flex;
-    min-height: 100vh;
+    min-height: 100dvh;
     position: relative;
     overflow-x: hidden;
     width: 100%;
@@ -156,7 +156,7 @@ body {
 
 #sidebar {
     width: var(--sidebar-width);
-    height: 100vh;
+    height: 100dvh;
     background: var(--bg-sidebar);
     border-left: 1px solid var(--border-primary);
     position: fixed;
@@ -173,7 +173,7 @@ body {
 #main-content {
     flex: 1;
     margin-right: var(--sidebar-width);
-    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     transition: margin-right var(--transition-base);
@@ -198,7 +198,8 @@ body {
     flex: 1;
     padding: var(--space-8);
     overflow-y: auto;
-    max-height: calc(100vh - var(--topbar-height));
+    max-height: calc(100dvh - var(--topbar-height));
+    padding-bottom: calc(var(--space-8) + 20px);
 }
 
 /* Scrollbar Styling */
@@ -443,7 +444,8 @@ a:hover {
 
     #page-content {
         padding: var(--space-4);
-        max-height: calc(100vh - var(--topbar-height) - var(--bottom-nav-height));
+        max-height: calc(100dvh - var(--topbar-height) - var(--bottom-nav-height));
+        padding-bottom: calc(var(--bottom-nav-height) + 80px); /* Ensure there's enough space to scroll above nav bar */
     }
 
     #topbar {
