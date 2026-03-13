@@ -72,7 +72,7 @@ export function renderClientForm(container, params = {}) {
             <textarea class="form-textarea" id="client-notes">${client?.notes || ''}</textarea>
           </div>
           
-          <div class="flex gap-3 mt-6">
+          <div class="flex gap-3 mt-6 form-actions-fixed">
             <button type="submit" class="btn btn-primary">
               ${isEdit ? '💾 حفظ التعديلات' : '✓ إنشاء العميل'}
             </button>

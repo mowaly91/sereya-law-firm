@@ -173,7 +173,7 @@ export function renderCaseForm(container, params = {}) {
           
           <div id="case-form-errors" class="form-error mb-4" style="display: none;"></div>
           
-          <div class="flex gap-3 mt-6">
+          <div class="flex gap-3 mt-6 form-actions-fixed">
             <button type="submit" class="btn btn-primary">
               ${isEdit ? '💾 حفظ التعديلات' : '✓ إنشاء القضية'}
             </button>
