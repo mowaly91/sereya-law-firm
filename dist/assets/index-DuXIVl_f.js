@@ -340,8 +340,8 @@
         </div>
       </div>
       
-      <div class="card" style="max-width: 800px;">
-        <form id="client-form">
+      <form id="client-form">
+        <div class="card" style="max-width: 800px;">
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">اسم العميل <span class="required">*</span></label>
@@ -383,15 +383,15 @@
             <label class="form-label">ملاحظات</label>
             <textarea class="form-textarea" id="client-notes">${a?.notes||""}</textarea>
           </div>
-          
-          <div class="flex gap-3 mt-6 form-actions-fixed">
-            <button type="submit" class="btn btn-primary">
-              ${s?"💾 حفظ التعديلات":"✓ إنشاء العميل"}
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="window.location.hash='/clients'">إلغاء</button>
-          </div>
-        </form>
-      </div>
+        </div>
+
+        <div class="flex gap-3 mt-6 form-actions-fixed">
+          <button type="submit" class="btn btn-primary">
+            ${s?"💾 حفظ التعديلات":"✓ إنشاء العميل"}
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="window.location.hash='/clients'">إلغاء</button>
+        </div>
+      </form>
     </div>
   `,e.querySelector("#client-form").addEventListener("submit",p=>{p.preventDefault();const u=ze({name:document.getElementById("client-name").value.trim(),nationalId:document.getElementById("client-national-id").value.trim(),phone:document.getElementById("client-phone").value.trim(),address:document.getElementById("client-address").value.trim(),poaNumber:document.getElementById("client-poa").value.trim(),notaryOffice:document.getElementById("client-notary").value.trim(),poaDate:document.getElementById("client-poa-date").value,notes:document.getElementById("client-notes").value.trim(),driveFolderUrl:a?.driveFolderUrl||"",driveFolderId:a?.driveFolderId||""});if(!u.name||!u.nationalId||!u.phone||!u.poaNumber||!u.notaryOffice||!u.poaDate){w("يرجى ملء جميع الحقول المطلوبة","error");return}if(s)c.update(l.CLIENTS,t.id,u),C(l.CLIENTS,t.id,"update",u),w("تم تحديث بيانات العميل","success");else{const h=c.create(l.CLIENTS,u);C(l.CLIENTS,h.id,"create",u),w("تم إنشاء العميل بنجاح","success")}window.location.hash="/clients"});const n=e.querySelector("#btn-sync-drive");async function o(p=!1){if(!a?.driveFolderId)return;const u=n?n.innerHTML:"";n&&(n.innerHTML="<i class='bx bx-loader-alt bx-spin'></i> جاري المزامنة...",n.disabled=!0);try{const r=await fetch(`/api/sync-drive?folderId=${encodeURIComponent(a.driveFolderId)}`),m=await r.json();if(!r.ok)throw new Error(m.error||"حدث خطأ أثناء المزامنة");m.nationalId?(document.getElementById("client-national-id").value=m.nationalId,w("تم العثور على الرقم القومي تلقائياً من ملفات درايف!","success"),n&&(n.style.display="none")):p||w("لم يتم العثور على رقم قومي في صور المجلد.","warning")}catch(h){console.error(h),p||w(h.message,"error")}finally{n&&(n.innerHTML=u,n.disabled=!1)}}n&&(n.addEventListener("click",()=>{o(!1)}),s&&!a?.nationalId&&o(!0))}function Tt(e){j("القضايا");const t=c.getAll(l.CASES);c.getAll(l.CLIENTS),c.getAll(l.USERS),e.innerHTML=`
     <div class="animate-fade-in">
@@ -460,8 +460,8 @@
         <button class="btn btn-secondary" onclick="window.location.hash='/cases'">↩ العودة</button>
       </div>
       
-      <div class="card" style="max-width: 900px;">
-        <form id="case-form">
+      <form id="case-form">
+        <div class="card" style="max-width: 900px;">
           <h3 class="mb-4" style="color: var(--accent-primary);"><i class='bx bx-list-check'></i> بيانات القضية الأساسية</h3>
           
           <div class="form-row-3">
@@ -598,15 +598,15 @@
           </div>
           
           <div id="case-form-errors" class="form-error mb-4" style="display: none;"></div>
-          
-          <div class="flex gap-3 mt-6 form-actions-fixed">
-            <button type="submit" class="btn btn-primary">
-              ${s?"💾 حفظ التعديلات":"✓ إنشاء القضية"}
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="window.location.hash='/cases'">إلغاء</button>
-          </div>
-        </form>
-      </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6 form-actions-fixed">
+          <button type="submit" class="btn btn-primary">
+            ${s?"💾 حفظ التعديلات":"✓ إنشاء القضية"}
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="window.location.hash='/cases'">إلغاء</button>
+        </div>
+      </form>
     </div>
   `,document.getElementById("case-type").addEventListener("change",r=>{const m=document.getElementById("criminal-stage-group");m.style.display=r.target.value==="جنائي"?"block":"none"});let p=a?.clientIds?[...a.clientIds]:a?.clientId?[a.clientId]:[],u=a?.primaryClientId||a?.clientId||"";function h(){const r=document.getElementById("client-tags-container"),m=document.getElementById("primary-client-group"),f=document.getElementById("primary-client-radios");r.innerHTML=p.map($=>{const y=n.find(i=>i.id===$),g=u===$;return y?`<span class="client-tag ${g?"primary":""}" data-client-id="${$}">${y.name}${g?" (رئيسي)":""}<button class="client-tag-remove" data-remove-id="${$}">&times;</button></span>`:""}).join(""),r.querySelectorAll(".client-tag-remove").forEach($=>{$.addEventListener("click",y=>{y.preventDefault();const g=$.dataset.removeId;p=p.filter(i=>i!==g),u===g&&(u=p[0]||""),h()})}),p.length>1?(m.style.display="block",f.innerHTML=p.map($=>{const y=n.find(g=>g.id===$);return y?`<label class="primary-select-radio"><input type="radio" name="primary-client" value="${$}" ${u===$?"checked":""} />${y.name}</label>`:""}).join(""),f.querySelectorAll('input[type="radio"]').forEach($=>{$.addEventListener("change",()=>{u=$.value,h()})})):(m.style.display="none",p.length===1&&(u=p[0]))}document.getElementById("add-client-btn").addEventListener("click",()=>{const r=document.getElementById("add-client-select"),m=r.value;m&&(p.includes(m)||(p.push(m),p.length===1&&(u=m),r.value="",h()))}),h(),document.getElementById("case-form").addEventListener("submit",r=>{r.preventDefault();const m=ut({caseNo:document.getElementById("case-no").value.trim(),year:document.getElementById("case-year").value.trim(),stageType:document.getElementById("case-stage").value,clientId:u,clientIds:[...p],primaryClientId:u,clientRole:document.getElementById("case-client-role").value,opponentName:document.getElementById("case-opponent").value.trim(),opponentRole:document.getElementById("case-opponent-role").value,court:document.getElementById("case-court").value.trim(),circuit:document.getElementById("case-circuit").value.trim(),caseType:document.getElementById("case-type").value,subject:document.getElementById("case-subject").value.trim(),firstSessionDate:document.getElementById("case-first-session").value,ownerId:document.getElementById("case-owner").value,status:s?document.getElementById("case-status")?.value||a.status:"نشطة",criminalStageType:document.getElementById("case-criminal-stage")?.value||"",notes:document.getElementById("case-notes").value.trim()}),f=[];if(m.caseNo||f.push("رقم القضية مطلوب"),m.year||f.push("السنة مطلوبة"),m.stageType||f.push("نوع المرحلة مطلوب"),p.length===0&&f.push("يجب إضافة عميل واحد على الأقل"),p.length>1&&!u&&f.push("يجب اختيار العميل الرئيسي عند وجود عدة عملاء"),m.clientRole||f.push("صفة العميل مطلوبة"),m.opponentName||f.push("اسم الخصم مطلوب"),m.opponentRole||f.push("صفة الخصم مطلوبة"),m.court||f.push("المحكمة مطلوبة"),m.circuit||f.push("الدائرة مطلوبة"),m.caseType||f.push("نوع القضية مطلوب"),m.subject||f.push("موضوع القضية مطلوب"),m.firstSessionDate||f.push("تاريخ أول جلسة مطلوب"),m.ownerId||f.push("المحامي المسؤول مطلوب"),m.caseType==="جنائي"&&!m.criminalStageType&&f.push("مرحلة القضية الجنائية مطلوبة"),s&&m.status==="مغلقة"){const $=c.query(l.ACTIONS,g=>g.caseId===t.id&&g.caseId!==""&&g.status!=="مكتمل"),y=c.query(l.DEADLINES,g=>g.caseId===t.id&&g.status==="مفتوح");$.length>0&&f.push(`لا يمكن إغلاق القضية: يوجد ${$.length} إجراء مفتوح مرتبط بها`),y.length>0&&f.push(`لا يمكن إغلاق القضية: يوجد ${y.length} موعد نهائي مفتوح`)}if(f.length>0){const $=document.getElementById("case-form-errors");$.style.display="block",$.innerHTML=f.join("<br>"),w("يرجى تصحيح الأخطاء","error");return}if(s)c.update(l.CASES,t.id,m),C(l.CASES,t.id,"update",m),w("تم تحديث القضية","success"),window.location.hash=`/cases/${t.id}`;else{const $=c.create(l.CASES,m);C(l.CASES,$.id,"create",m);const y=c.create(l.SESSIONS,{caseId:$.id,date:m.firstSessionDate,sessionType:m.caseType==="جنائي"&&m.criminalStageType==="تحقيقات نيابة"?"تحقيق":"جلسة استماع",decisionResult:"",nextSessionDate:"",notes:"جلسة أولى – تم إنشاؤها تلقائياً"});C(l.SESSIONS,y.id,"create",{auto:!0,caseId:$.id}),w("تم إنشاء القضية وجلستها الأولى بنجاح","success"),window.location.hash=`/cases/${$.id}`}})}const kt=[{decisionType:"تأجيل لإعادة الإعلان",actionType:"إعلان/خدمة",executionProof:"تاريخ التقديم للمحضر + رقم المرجع + النتيجة",subTasks:[],requiresNextDate:!0},{decisionType:"تأجيل لتصريح",actionType:"تصريح محكمة",executionProof:"رقم التصريح + التاريخ + المرفق",subTasks:[],requiresNextDate:!0},{decisionType:"تأجيل لمذكرة ومستندات",actionType:"حزمة تحضير",executionProof:"تفاصيل التقديم",subTasks:[{title:"صياغة المذكرة",completed:!1},{title:"مراجعة المذكرة",completed:!1},{title:"تحضير المستندات",completed:!1},{title:"تصوير ونسخ",completed:!1},{title:"تقديم الحزمة",completed:!1}],requiresNextDate:!0},{decisionType:"إحالة لخبير",actionType:"متابعة خبير",executionProof:"متابعة الموعد + تقديم الملاحظات + استلام التقرير",subTasks:[{title:"متابعة موعد الخبير",completed:!1},{title:"تقديم ملاحظات",completed:!1},{title:"استلام التقرير",completed:!1}],requiresNextDate:!0},{decisionType:"شطب",actionType:"تجديد من الشطب",executionProof:"تقديم طلب التجديد",subTasks:[],requiresNextDate:!1},{decisionType:"صدور حكم",actionType:"مراجعة حكم",executionProof:"مراجعة الحكم وتحديد الإجراء التالي",subTasks:[],requiresNextDate:!1},{decisionType:"حبس احتياطي",actionType:"حضور تجديد حبس",executionProof:"حضور جلسة التجديد",subTasks:[],requiresNextDate:!1,urgent:!0},{decisionType:"طلب تحقيقات",actionType:"متابعة تحقيق",executionProof:"استلام التحقيق + الخطوة التالية",subTasks:[],requiresNextDate:!0},{decisionType:"تأجيل للمرافعة",actionType:"حزمة تحضير",executionProof:"تحضير المرافعة",subTasks:[{title:"تحضير نقاط المرافعة",completed:!1},{title:"مراجعة القضية",completed:!1}],requiresNextDate:!0},{decisionType:"تأجيل للاطلاع",actionType:"حزمة تحضير",executionProof:"الاطلاع والتحضير",subTasks:[{title:"الاطلاع على المستندات",completed:!1},{title:"تحضير الرد",completed:!1}],requiresNextDate:!0},{decisionType:"تأجيل عام",actionType:"أخرى",executionProof:"",subTasks:[],requiresNextDate:!0},{decisionType:"إحالة للمحكمة",actionType:"أخرى",executionProof:"إنشاء قضية جديدة مرتبطة",subTasks:[],requiresNextDate:!1,createsLinkedCase:!0},{decisionType:"نطق بالحكم",actionType:"مراجعة حكم",executionProof:"مراجعة الحكم وتحديد الإجراء التالي",subTasks:[],requiresNextDate:!1}];function ye(){const e=c.getAll(l.DECISION_MAP);return e.length===0?(kt.forEach(t=>{c.create(l.DECISION_MAP,t)}),c.getAll(l.DECISION_MAP)):e}function ue(e){return ye().find(s=>s.decisionType===e)||null}function Dt(e,t){return c.update(l.DECISION_MAP,e,t)}function Lt(e){return c.create(l.DECISION_MAP,e)}function At(e){return c.softDelete(l.DECISION_MAP,e)}function Bt(e){const t=ue(e);return t?t.createsLinkedCase===!0:!1}function ie(e,t){c.getAll(e).length===0&&t.forEach((a,n)=>{c.create(e,{label:a,order:n})})}function ee(){return ie(l.LOOKUP_ACTION_TYPES,Me),c.getAll(l.LOOKUP_ACTION_TYPES).sort((e,t)=>(e.order??0)-(t.order??0)).map(e=>e.label)}function Ke(){return ie(l.LOOKUP_DECISION_TYPES,Fe),c.getAll(l.LOOKUP_DECISION_TYPES).sort((e,t)=>(e.order??0)-(t.order??0)).map(e=>e.label)}function Ct(){return ie(l.LOOKUP_ACTION_TYPES,Me),c.getAll(l.LOOKUP_ACTION_TYPES).sort((e,t)=>(e.order??0)-(t.order??0))}function Nt(){return ie(l.LOOKUP_DECISION_TYPES,Fe),c.getAll(l.LOOKUP_DECISION_TYPES).sort((e,t)=>(e.order??0)-(t.order??0))}function qt(e,t){const a=c.getAll(e).reduce((n,o)=>Math.max(n,o.order??0),0);return c.create(e,{label:t.trim(),order:a+1})}function Ot(e,t,s){return c.update(e,t,{label:s.trim()})}function jt(e,t){const s=c.getById(e,t);if(!s)return{ok:!1};const a=ye();let n=null;return e===l.LOOKUP_ACTION_TYPES?n=a.some(o=>o.actionType===s.label):n=a.some(o=>o.decisionType===s.label),c.softDelete(e,t),n?{ok:!0,warning:`"${s.label}" محذوف من القائمة لكنه لا يزال مرتبطاً بربط قرارات. يُنصح بمراجعة صفحة ربط القرارات.`}:{ok:!0}}function Ve(e,t){if(!ae()){w("تعديل الإجراءات متاح للشركاء فقط","error");return}const s=c.getById(l.ACTIONS,e);if(!s)return;const a=c.getAll(l.CLIENTS),n=c.getAll(l.CASES),p=c.getAll(l.USERS).filter(y=>y.active&&be.includes(y.role)),u=s.status==="مكتمل",h=ee();function r(y){return y?n.filter(g=>(g.clientIds||(g.clientId?[g.clientId]:[])).includes(y)||g.primaryClientId===y||g.clientId===y):[]}const m=r(s.clientId),f=`
     <form id="edit-action-partner-form" autocomplete="off">
