@@ -27,8 +27,8 @@ export function renderCaseForm(container, params = {}) {
         <button class="btn btn-secondary" onclick="window.location.hash='/cases'">↩ العودة</button>
       </div>
       
-      <div class="card" style="max-width: 900px;">
-        <form id="case-form">
+      <form id="case-form">
+        <div class="card" style="max-width: 900px;">
           <h3 class="mb-4" style="color: var(--accent-primary);"><i class='bx bx-list-check'></i> بيانات القضية الأساسية</h3>
           
           <div class="form-row-3">
@@ -172,15 +172,15 @@ export function renderCaseForm(container, params = {}) {
           </div>
           
           <div id="case-form-errors" class="form-error mb-4" style="display: none;"></div>
-          
-          <div class="flex gap-3 mt-6 form-actions-fixed">
-            <button type="submit" class="btn btn-primary">
-              ${isEdit ? '💾 حفظ التعديلات' : '✓ إنشاء القضية'}
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="window.location.hash='/cases'">إلغاء</button>
-          </div>
-        </form>
-      </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6 form-actions-fixed">
+          <button type="submit" class="btn btn-primary">
+            ${isEdit ? '💾 حفظ التعديلات' : '✓ إنشاء القضية'}
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="window.location.hash='/cases'">إلغاء</button>
+        </div>
+      </form>
     </div>
   `;
 

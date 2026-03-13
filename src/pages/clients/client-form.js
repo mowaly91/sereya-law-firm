@@ -28,8 +28,8 @@ export function renderClientForm(container, params = {}) {
         </div>
       </div>
       
-      <div class="card" style="max-width: 800px;">
-        <form id="client-form">
+      <form id="client-form">
+        <div class="card" style="max-width: 800px;">
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">اسم العميل <span class="required">*</span></label>
@@ -71,15 +71,15 @@ export function renderClientForm(container, params = {}) {
             <label class="form-label">ملاحظات</label>
             <textarea class="form-textarea" id="client-notes">${client?.notes || ''}</textarea>
           </div>
-          
-          <div class="flex gap-3 mt-6 form-actions-fixed">
-            <button type="submit" class="btn btn-primary">
-              ${isEdit ? '💾 حفظ التعديلات' : '✓ إنشاء العميل'}
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="window.location.hash='/clients'">إلغاء</button>
-          </div>
-        </form>
-      </div>
+        </div>
+
+        <div class="flex gap-3 mt-6 form-actions-fixed">
+          <button type="submit" class="btn btn-primary">
+            ${isEdit ? '💾 حفظ التعديلات' : '✓ إنشاء العميل'}
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="window.location.hash='/clients'">إلغاء</button>
+        </div>
+      </form>
     </div>
   `;
 
