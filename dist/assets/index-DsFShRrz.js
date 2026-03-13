@@ -384,7 +384,7 @@
             <textarea class="form-textarea" id="client-notes">${a?.notes||""}</textarea>
           </div>
           
-          <div class="flex gap-3 mt-6">
+          <div class="flex gap-3 mt-6 form-actions-fixed">
             <button type="submit" class="btn btn-primary">
               ${s?"💾 حفظ التعديلات":"✓ إنشاء العميل"}
             </button>
@@ -599,7 +599,7 @@
           
           <div id="case-form-errors" class="form-error mb-4" style="display: none;"></div>
           
-          <div class="flex gap-3 mt-6">
+          <div class="flex gap-3 mt-6 form-actions-fixed">
             <button type="submit" class="btn btn-primary">
               ${s?"💾 حفظ التعديلات":"✓ إنشاء القضية"}
             </button>
