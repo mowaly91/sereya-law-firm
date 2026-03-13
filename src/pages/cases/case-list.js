@@ -97,14 +97,14 @@ export function renderCaseList(container) {
 
             return `
         <tr class="clickable-row" onclick="window.location.hash='/cases/${c.id}'">
-          <td><strong>${c.caseNo}/${c.year}</strong></td>
-          <td><span class="badge badge-${typeClass}">${c.caseType}</span></td>
+          <td><strong>${c.caseNo || ''}/${c.year || ''}</strong></td>
+          <td><span class="badge badge-${typeClass}">${c.caseType || '—'}</span></td>
           <td>${client ? client.name : '—'}</td>
-          <td>${c.opponentName}</td>
-          <td class="text-sm">${c.court}</td>
-          <td class="text-sm">${c.subject}</td>
-          <td>${c.stageType}</td>
-          <td><span class="badge badge-${statusClass}">${c.status}</span></td>
+          <td>${c.opponentName || '—'}</td>
+          <td class="text-sm">${c.court || '—'}</td>
+          <td class="text-sm">${c.subject || '—'}</td>
+          <td>${c.stageType || '—'}</td>
+          <td><span class="badge badge-${statusClass}">${c.status || '—'}</span></td>
           <td class="text-sm">${owner ? owner.name : '—'}</td>
         </tr>
       `;

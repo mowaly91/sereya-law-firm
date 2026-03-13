@@ -53,8 +53,16 @@ async function init() {
 }
 
 async function bootstrapApp() {
-  // Sync data from backend first
-  await Store.syncFromServer(Object.values(ENTITIES));
+  // Sync data from backend first (only entities with valid array-returning API endpoints)
+  const SYNCABLE_ENTITIES = [
+    ENTITIES.CLIENTS,
+    ENTITIES.CASES,
+    ENTITIES.SESSIONS,
+    ENTITIES.ACTIONS,
+    ENTITIES.DEADLINES,
+    ENTITIES.USERS,
+  ];
+  await Store.syncFromServer(SYNCABLE_ENTITIES);
 
   // Seed demo data
   seedIfEmpty();

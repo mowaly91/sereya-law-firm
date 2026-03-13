@@ -143,7 +143,10 @@ router.post('/send-invite', async (req, res) => {
             [token, expires.toISOString(), new Date().toISOString(), userId]
         );
 
-        const appUrl = process.env.APP_URL || 'http://localhost:5173';
+        // Derive the app URL from the request origin when not explicitly configured
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+        const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+        const appUrl = process.env.APP_URL || `${protocol}://${host}`;
         const inviteLink = `${appUrl}/?token=${token}#/set-password`;
 
         // Attempt to send email (non-fatal if SMTP not configured)

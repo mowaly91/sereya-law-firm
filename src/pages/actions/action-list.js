@@ -124,8 +124,9 @@ export function renderActionList(container) {
     // Group by Action Type
     const grouped = {};
     filtered.forEach(a => {
-      if (!grouped[a.actionType]) grouped[a.actionType] = [];
-      grouped[a.actionType].push(a);
+      const typeKey = a.actionType || 'غير محدد';
+      if (!grouped[typeKey]) grouped[typeKey] = [];
+      grouped[typeKey].push(a);
     });
 
     const actionContainer = document.getElementById('actions-container');

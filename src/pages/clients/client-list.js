@@ -91,11 +91,11 @@ function renderClientRows(clients) {
 
     return `
     <tr class="clickable-row" data-id="${c.id}">
-      <td><strong>${c.name}</strong></td>
-      <td>${c.nationalId}</td>
-      <td>${c.phone}</td>
-      <td>${c.poaNumber}</td>
-      <td>${c.notaryOffice}</td>
+      <td><strong>${c.name || '—'}</strong></td>
+      <td>${c.nationalId || ''}</td>
+      <td>${c.phone || ''}</td>
+      <td>${c.poaNumber || ''}</td>
+      <td>${c.notaryOffice || ''}</td>
       <td>${formatDate(c.poaDate)}</td>
       <td>
         <div class="table-actions">

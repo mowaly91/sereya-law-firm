@@ -166,7 +166,13 @@ export const Store = {
                 const res = await fetch(`${API_BASE_URL}/${entity}`, { headers });
                 if (res.ok) {
                     const data = await res.json();
-                    localStorage.setItem(getStoreKey(entity), JSON.stringify(data));
+                    // Only overwrite localStorage if the response is a valid array
+                    // (guards against endpoints that return objects/errors)
+                    if (Array.isArray(data)) {
+                        localStorage.setItem(getStoreKey(entity), JSON.stringify(data));
+                    } else {
+                        console.warn(`sync: skipping '${entity}' – server returned non-array response`);
+                    }
                 }
             }
             console.log("Sync complete!");
