@@ -701,22 +701,46 @@
 
 @media (max-width: 768px) {
     .dashboard-stats {
-        display: flex;
-        overflow-x: auto;
-        scroll-snap-type: x mandatory;
-        gap: var(--space-4);
-        padding-bottom: var(--space-4);
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none; /* Firefox */
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: var(--space-2) !important;
+        margin-bottom: var(--space-4) !important;
+        overflow-x: visible !important;
+        padding-bottom: 0 !important;
     }
     
-    .dashboard-stats::-webkit-scrollbar {
-        display: none; /* Chrome, Safari */
+    .dashboard-stats .card {
+        padding: var(--space-2) !important;
+        text-align: center !important;
+        min-width: 0 !important;
+        border-radius: var(--radius-md) !important;
     }
 
-    .dashboard-stats > .card {
-        flex: 0 0 85%;
-        scroll-snap-align: center;
+    .dashboard-stats .card-header {
+        flex-direction: column-reverse !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-bottom: 0 !important;
+        gap: 2px !important;
+    }
+
+    .dashboard-stats .card-value {
+        font-size: var(--text-base) !important;
+        line-height: 1 !important;
+    }
+
+    .dashboard-stats .card-label {
+        font-size: 8px !important;
+        margin-top: 2px !important;
+        white-space: nowrap !important;
+        letter-spacing: -0.2px !important;
+    }
+
+    .dashboard-stats .card-icon {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.9rem !important;
+        margin-bottom: 4px !important;
     }
 
     .dashboard-widgets {
