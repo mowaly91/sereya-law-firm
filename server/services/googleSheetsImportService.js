@@ -144,7 +144,7 @@ async function previewSheet(sheetUrlOrId, tabName = '', range = '') {
         const placeholders = nids.map(() => '?').join(',');
         
         // Check for conflicts in DB
-        const existingClients = await dbAsync.all(`SELECT id, nationalId FROM clients WHERE nationalId IN (${placeholders}) AND _deleted = 0`, nids);
+        const existingClients = await dbAsync.all(`SELECT id, "nationalId" FROM clients WHERE "nationalId" IN (${placeholders}) AND _deleted = 0`, nids);
         
         const existingMap = {};
         existingClients.forEach(c => { existingMap[c.nationalId] = c.id; });
@@ -188,8 +188,7 @@ async function commitData(importRequest, userId) {
                 results.skipped++;
                 continue;
             }
-
-            const existing = await dbAsync.get(`SELECT * FROM clients WHERE nationalId = ? AND _deleted = 0`, [rowData.nationalId]);
+            const existing = await dbAsync.get(`SELECT * FROM clients WHERE "nationalId" = ? AND _deleted = 0`, [rowData.nationalId]);
 
             const now = new Date().toISOString();
 
