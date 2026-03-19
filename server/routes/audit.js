@@ -8,7 +8,8 @@ const router = express.Router();
 // but we add it here explicitly for safety as well.
 router.get('/', requireSuperAdmin, async (req, res) => {
     try {
-        const rows = await dbAsync.all(`SELECT * FROM audit_logs ORDER BY "_createdAt" DESC LIMIT 500`);
+        const rows = await dbAsync.all(`SELECT * FROM audit_logs ORDER BY id DESC LIMIT 500`);
+
         const mapped = rows.map(r => {
             const parsed = { ...r };
             try { if (parsed.details) parsed.details = JSON.parse(parsed.details); } catch(e) {}
