@@ -1,11 +1,12 @@
 exports.up = (pgm) => {
-    // Add missing fields to clients table to match the onboarding requirements
+    // Add missing fields to clients table for Google Sheets onboarding.
+    // ifNotExists: true makes this safe to re-run if columns already exist.
     pgm.addColumns('clients', {
-        fullNameAr: { type: 'text' },
+        fullNameAr:        { type: 'text' },
         powerOfAttorneyNo: { type: 'text' },
-        driveLink: { type: 'text' },
-        sourceIndex: { type: 'text' }
-    });
+        driveLink:         { type: 'text' },
+        sourceIndex:       { type: 'text' }
+    }, { ifNotExists: true });
 };
 
 exports.down = (pgm) => {

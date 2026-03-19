@@ -1,23 +1,23 @@
 exports.up = (pgm) => {
-    // ----------------------------------------------------------------------
-    // Create Tables
-    // ----------------------------------------------------------------------
+    // All tables use ifNotExists: true so this migration is safe to run
+    // even against a DB that was set up manually before migrations existed.
+
     pgm.createTable('users', {
         id: { type: 'text', primaryKey: true },
         name: { type: 'text', notNull: false },
-        role: { type: 'text', notNull: false }, // we can optionally enforce check later
+        role: { type: 'text', notNull: false },
         email: { type: 'text', notNull: true, unique: true },
         phone: { type: 'text' },
-        active: { type: 'integer', default: 1 }, // Retain integer for compat
+        active: { type: 'integer', default: 1 },
         password_hash: { type: 'text', notNull: true },
         invite_token: { type: 'text' },
         invite_token_expires: { type: 'text' },
         _createdAt: { type: 'text' },
         _updatedAt: { type: 'text' },
         _deleted: { type: 'integer', default: 0, notNull: true }
-    });
-    pgm.createIndex('users', 'email');
-    pgm.createIndex('users', 'role');
+    }, { ifNotExists: true });
+    pgm.createIndex('users', 'email', { ifNotExists: true });
+    pgm.createIndex('users', 'role', { ifNotExists: true });
 
     pgm.createTable('clients', {
         id: { type: 'text', primaryKey: true },
@@ -35,9 +35,9 @@ exports.up = (pgm) => {
         _createdAt: { type: 'text' },
         _updatedAt: { type: 'text' },
         _deleted: { type: 'integer', default: 0, notNull: true }
-    });
-    pgm.createIndex('clients', 'nationalId');
-    pgm.createIndex('clients', 'name');
+    }, { ifNotExists: true });
+    pgm.createIndex('clients', 'nationalId', { ifNotExists: true });
+    pgm.createIndex('clients', 'name', { ifNotExists: true });
 
     pgm.createTable('cases', {
         id: { type: 'text', primaryKey: true },
@@ -63,14 +63,14 @@ exports.up = (pgm) => {
         _createdAt: { type: 'text' },
         _updatedAt: { type: 'text' },
         _deleted: { type: 'integer', default: 0, notNull: true }
-    });
-    pgm.createIndex('cases', 'clientId');
-    pgm.createIndex('cases', 'status');
+    }, { ifNotExists: true });
+    pgm.createIndex('cases', 'clientId', { ifNotExists: true });
+    pgm.createIndex('cases', 'status', { ifNotExists: true });
 
     pgm.createTable('sessions', {
         id: { type: 'text', primaryKey: true },
         caseId: { type: 'text', notNull: true, references: '"cases"', onDelete: 'CASCADE' },
-        date: { type: 'text', notNull: true }, // keeping TEXT for raw compat if app sends strings
+        date: { type: 'text', notNull: true },
         sessionType: { type: 'text' },
         decisionResult: { type: 'text' },
         nextSessionDate: { type: 'text' },
@@ -81,9 +81,9 @@ exports.up = (pgm) => {
         _createdAt: { type: 'text' },
         _updatedAt: { type: 'text' },
         _deleted: { type: 'integer', default: 0, notNull: true }
-    });
-    pgm.createIndex('sessions', 'caseId');
-    pgm.createIndex('sessions', 'date');
+    }, { ifNotExists: true });
+    pgm.createIndex('sessions', 'caseId', { ifNotExists: true });
+    pgm.createIndex('sessions', 'date', { ifNotExists: true });
 
     pgm.createTable('actions', {
         id: { type: 'text', primaryKey: true },
@@ -104,10 +104,10 @@ exports.up = (pgm) => {
         _createdAt: { type: 'text' },
         _updatedAt: { type: 'text' },
         _deleted: { type: 'integer', default: 0, notNull: true }
-    });
-    pgm.createIndex('actions', 'caseId');
-    pgm.createIndex('actions', 'status');
-    pgm.createIndex('actions', 'responsibleUserId');
+    }, { ifNotExists: true });
+    pgm.createIndex('actions', 'caseId', { ifNotExists: true });
+    pgm.createIndex('actions', 'status', { ifNotExists: true });
+    pgm.createIndex('actions', 'responsibleUserId', { ifNotExists: true });
 
     pgm.createTable('deadlines', {
         id: { type: 'text', primaryKey: true },
@@ -121,8 +121,8 @@ exports.up = (pgm) => {
         _createdAt: { type: 'text' },
         _updatedAt: { type: 'text' },
         _deleted: { type: 'integer', default: 0, notNull: true }
-    });
-    pgm.createIndex('deadlines', 'endDate');
+    }, { ifNotExists: true });
+    pgm.createIndex('deadlines', 'endDate', { ifNotExists: true });
 
     pgm.createTable('lookup_mappings', {
         id: { type: 'text', primaryKey: true },
@@ -131,15 +131,14 @@ exports.up = (pgm) => {
         _createdAt: { type: 'text' },
         _updatedAt: { type: 'text' },
         _deleted: { type: 'integer', default: 0, notNull: true }
-    });
-    pgm.createIndex('lookup_mappings', 'decisionType');
+    }, { ifNotExists: true });
+    pgm.createIndex('lookup_mappings', 'decisionType', { ifNotExists: true });
 
     pgm.createTable('settings', {
         key: { type: 'text', primaryKey: true },
         value: { type: 'text' }
-    });
+    }, { ifNotExists: true });
 
-    // Special constraint based on plan/prompt
     pgm.createTable('audit_logs', {
         id: { type: 'text', primaryKey: true },
         userId: { type: 'text', references: '"users"', onDelete: 'CASCADE' },
@@ -148,15 +147,10 @@ exports.up = (pgm) => {
         entityId: { type: 'text' },
         details: { type: 'text' },
         _createdAt: { type: 'text' },
-        _deleted: { type: 'integer', default: 0, notNull: true } // From prompt!
-    });
-    pgm.createIndex('audit_logs', 'userId');
-    pgm.createIndex('audit_logs', ['entity', 'entityId']);
-
-    // ----------------------------------------------------------------------
-    // Seed initial lookup values if needed (per Seed & Bootstrap Plan section E.3)
-    // ----------------------------------------------------------------------
-    // We will just create schema structure now. Lookup values can be inserted if needed in app.
+        _deleted: { type: 'integer', default: 0, notNull: true }
+    }, { ifNotExists: true });
+    pgm.createIndex('audit_logs', 'userId', { ifNotExists: true });
+    pgm.createIndex('audit_logs', ['entity', 'entityId'], { ifNotExists: true });
 };
 
 exports.down = (pgm) => {

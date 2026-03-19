@@ -1,6 +1,13 @@
 // ============================================================================
 // startup.js — Render free-tier bootstrap orchestrator
 // ============================================================================
+// Runs on every deploy before server.js:
+//   1. Validate required production env vars (fail fast)
+//   2. Run DB migrations (idempotent — safe to re-run against existing schema)
+//   3. Force-reset admin password if RESET_ADMIN_PASSWORD=true
+//   4. Seed initial admin if users table is empty
+//   5. Launch server.js
+// ============================================================================
 
 'use strict';
 
@@ -25,89 +32,9 @@ const { runner } = require('node-pg-migrate');
 }());
 
 // ── 2. Run DB migrations ─────────────────────────────────────────────────────
+// Migrations use IF NOT EXISTS so they are safe to run against any existing schema.
 async function runMigrations() {
     console.log('[STARTUP] Running database migrations...');
-
-    const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-    });
-
-    const MIG1 = '1773920954370_initial-schema';
-    const MIG2 = '1773930854841_add-client-google-sheet-fields';
-
-    try {
-        // ── What state is the DB in? ────────────────────────────────────────
-        const { rows: u } = await pool.query(
-            `SELECT to_regclass('public.users') AS tbl`
-        );
-        const usersExist = !!u[0].tbl;
-
-        if (!usersExist) {
-            // Fresh DB — let the runner do everything from scratch
-            console.log('[STARTUP] Fresh database — runner will apply all migrations.');
-            await pool.end();
-            return await runWithRunner();
-        }
-
-        // Users table exists. Ensure pgmigrations table exists.
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS pgmigrations (
-                id     SERIAL       PRIMARY KEY,
-                name   VARCHAR(255) NOT NULL,
-                run_on TIMESTAMP    NOT NULL DEFAULT now()
-            )
-        `);
-
-        // Record migration 1 if not already recorded
-        const { rows: r1 } = await pool.query(
-            `SELECT 1 FROM pgmigrations WHERE name = $1`, [MIG1]
-        );
-        if (r1.length === 0) {
-            await pool.query(
-                `INSERT INTO pgmigrations (name, run_on) VALUES ($1, now())`, [MIG1]
-            );
-            console.log('[STARTUP] ✅ Migration 1 (initial-schema) recorded as applied.');
-        }
-
-        // Check if driveLink column exists (migration 2 already applied to schema?)
-        const { rows: col } = await pool.query(`
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name = 'clients' AND column_name = 'driveLink'
-            LIMIT 1
-        `);
-        const driveLinkExists = col.length > 0;
-
-        // Record migration 2 if columns already exist in DB
-        if (driveLinkExists) {
-            const { rows: r2 } = await pool.query(
-                `SELECT 1 FROM pgmigrations WHERE name = $1`, [MIG2]
-            );
-            if (r2.length === 0) {
-                await pool.query(
-                    `INSERT INTO pgmigrations (name, run_on) VALUES ($1, now())`, [MIG2]
-                );
-                console.log('[STARTUP] ✅ Migration 2 (google-sheet-fields) recorded as applied.');
-            }
-            console.log('[STARTUP] ✅ Migration tracking up to date. Schema already current.');
-            return; // Both recorded — runner not needed
-        }
-
-        // driveLink column missing — migration 2 genuinely needs to run
-        console.log('[STARTUP] Migration 2 (google-sheet-fields) not applied — running now...');
-
-    } catch (err) {
-        console.error('[STARTUP] ❌ Migration bootstrap failed:', err.message);
-        process.exit(1);
-    } finally {
-        await pool.end();
-    }
-
-    // Run only remaining (unrecorded) migrations via runner
-    await runWithRunner();
-}
-
-async function runWithRunner() {
     try {
         const migrationsRun = await runner({
             databaseUrl:     process.env.DATABASE_URL,
@@ -120,15 +47,15 @@ async function runWithRunner() {
         if (migrationsRun && migrationsRun.length > 0) {
             console.log(`[STARTUP] ✅ ${migrationsRun.length} migration(s) applied.`);
         } else {
-            console.log('[STARTUP] ✅ No pending migrations.');
+            console.log('[STARTUP] ✅ DB schema is up to date.');
         }
     } catch (err) {
-        console.error('[STARTUP] ❌ Migration runner failed:', err.message);
+        console.error('[STARTUP] ❌ Migration failed:', err.message);
         process.exit(1);
     }
 }
 
-// ── 3a. Force-reset admin password (one-time escape hatch) ───────────────────
+// ── 3. Force-reset admin password (one-time escape hatch) ────────────────────
 // Set RESET_ADMIN_PASSWORD=true in Render env to force-update the password for
 // INIT_ADMIN_EMAIL. Remove the env var after first successful login.
 async function resetAdminPasswordIfRequested() {
@@ -141,16 +68,11 @@ async function resetAdminPasswordIfRequested() {
         return;
     }
 
-    const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-    });
-
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
     try {
         const hash = await bcrypt.hash(password, 12);
         const now  = new Date().toISOString();
 
-        // Try update existing user first
         const { rowCount } = await pool.query(
             `UPDATE users SET password_hash = $1, role = 'admin', active = 1, _updatedAt = $2
              WHERE email = $3 AND _deleted = 0`,
@@ -160,12 +82,11 @@ async function resetAdminPasswordIfRequested() {
         if (rowCount > 0) {
             console.log(`[STARTUP] ✅ Password reset for ${email} (role enforced: admin).`);
         } else {
-            // User doesn't exist — create them
             const id = 'admin_' + Date.now().toString(36);
             await pool.query(
                 `INSERT INTO users (id, name, role, email, active, password_hash, _createdAt, _updatedAt, _deleted)
-                 VALUES ($1, $2, 'admin', $3, 1, $4, $5, $5, 0)`,
-                [id, 'Admin', email.trim().toLowerCase(), hash, now]
+                 VALUES ($1, 'Admin', 'admin', $2, 1, $3, $4, $4, 0)`,
+                [id, email.trim().toLowerCase(), hash, now]
             );
             console.log(`[STARTUP] ✅ Admin user created: ${email}`);
         }
@@ -176,21 +97,15 @@ async function resetAdminPasswordIfRequested() {
     }
 }
 
-
+// ── 4. Seed initial admin user ───────────────────────────────────────────────
 async function seedAdminIfNeeded() {
     const email    = process.env.INIT_ADMIN_EMAIL;
     const password = process.env.INIT_ADMIN_PASSWORD;
     if (!email || !password) return;
 
-    const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-    });
-
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
     try {
-        const { rows } = await pool.query(
-            `SELECT COUNT(*) AS count FROM users WHERE _deleted = 0`
-        );
+        const { rows } = await pool.query(`SELECT COUNT(*) AS count FROM users WHERE _deleted = 0`);
         if (parseInt(rows[0].count, 10) > 0) {
             console.log('[STARTUP] ✅ Users already exist — skipping admin seed.');
             return;
@@ -200,8 +115,8 @@ async function seedAdminIfNeeded() {
         const now  = new Date().toISOString();
         await pool.query(
             `INSERT INTO users (id, name, role, email, active, password_hash, _createdAt, _updatedAt, _deleted)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-            [id, 'Admin', 'admin', email.trim().toLowerCase(), 1, hash, now, now, 0]
+             VALUES ($1, 'Admin', 'admin', $2, 1, $3, $4, $4, 0)`,
+            [id, email.trim().toLowerCase(), hash, now]
         );
         console.log(`[STARTUP] ✅ Initial admin created: ${email}`);
     } catch (err) {
@@ -215,7 +130,7 @@ async function seedAdminIfNeeded() {
     }
 }
 
-// ── 4. Launch server.js ──────────────────────────────────────────────────────
+// ── 5. Launch server.js ──────────────────────────────────────────────────────
 async function main() {
     await runMigrations();
     await resetAdminPasswordIfRequested();
