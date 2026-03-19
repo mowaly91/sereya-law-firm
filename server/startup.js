@@ -32,9 +32,25 @@ const { runner } = require('node-pg-migrate');
 }());
 
 // ── 2. Run DB migrations ─────────────────────────────────────────────────────
-// Migrations use IF NOT EXISTS so they are safe to run against any existing schema.
 async function runMigrations() {
     console.log('[STARTUP] Running database migrations...');
+
+    // Clean up any partially-applied migration 3 record so it re-runs cleanly
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    try {
+        const { rows: pg } = await pool.query(`SELECT to_regclass('public.pgmigrations') AS tbl`);
+        if (pg[0].tbl) {
+            await pool.query(
+                `DELETE FROM pgmigrations WHERE name = $1`,
+                ['1773940000000_ensure-missing-tables']
+            );
+        }
+    } catch (e) {
+        // Non-fatal — table may not exist yet on fresh DB
+    } finally {
+        await pool.end();
+    }
+
     try {
         const migrationsRun = await runner({
             databaseUrl:     process.env.DATABASE_URL,
@@ -54,6 +70,7 @@ async function runMigrations() {
         process.exit(1);
     }
 }
+
 
 // ── 3. Force-reset admin password (one-time escape hatch) ────────────────────
 // Set RESET_ADMIN_PASSWORD=true in Render env to force-update the password for
