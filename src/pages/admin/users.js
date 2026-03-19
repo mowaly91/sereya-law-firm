@@ -284,29 +284,38 @@ function openUserModal(existing, container) {
                 return;
             }
 
-            // Create user first then set password
-            const data = createUser({ name, role, email, phone, active: true });
-            const newUser = Store.create(ENTITIES.USERS, data);
-            logAudit(ENTITIES.USERS, newUser.id, 'create', data);
-
-            // Now set the password via API
+            // Create user securely and synchronously to avoid background-sync race conditions
+            const data = { name, role, email, phone, active: true, password: pw };
+            const btn = document.getElementById('save-user');
+            btn.disabled = true;
+            
             try {
-                const res = await fetch(`${API_BASE}/auth/admin-set-password`, {
+                const token = getAuthToken();
+                const res = await fetch(`${API_BASE}/users`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
-                    body: JSON.stringify({ userId: newUser.id, password: pw })
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(data)
                 });
+                const responseData = await res.json();
+                
                 if (!res.ok) {
-                    const d = await res.json();
-                    showToast(`تم إنشاء المستخدم لكن فشل تعيين كلمة المرور: ${d.error}`, 'warning');
-                } else {
-                    showToast(`✅ تم إضافة ${name} وتعيين كلمة مروره بنجاح`, 'success');
+                    showToast(`خطأ: ${responseData.error || 'تعذر إضافة المستخدم'}`, 'error');
+                    btn.disabled = false;
+                    return;
                 }
-            } catch {
-                showToast('تم إنشاء المستخدم لكن تعذر الاتصال بالخادم لتعيين كلمة المرور', 'warning');
+                
+                // Add to local store manually since we bypassed the Store.create() queue
+                const items = Store.getAll(ENTITIES.USERS);
+                items.push(responseData);
+                localStorage.setItem(`slf_users`, JSON.stringify(items));
+                Store.emit('change', { entityType: ENTITIES.USERS, action: 'create', data: responseData });
+                
+                logAudit(ENTITIES.USERS, responseData.id, 'create', data);
+                showToast(`✅ تم إضافة ${name} وتعيين كلمة مروره بنجاح`, 'success');
+            } catch (err) {
+                showToast('تعذر الاتصال بالخادم', 'error');
+                btn.disabled = false;
+                return;
             }
         } else {
             // Edit existing user
