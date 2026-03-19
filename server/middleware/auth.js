@@ -19,9 +19,10 @@ const isStrictAdmin = process.env.RBAC_STRICT_ADMIN === 'true';
 
 // Roles that carry full super-admin privileges
 // The user explicitly requested to treat 'شريك' (partner) as an admin permanently.
+// A new 'مدير النظام' (System Admin) role was also added to the UI above partner.
 const SUPER_ADMIN_ROLES = isStrictAdmin 
-    ? new Set(['admin', 'شريك']) 
-    : new Set(['admin', 'Admin', 'شريك']);
+    ? new Set(['admin', 'شريك', 'مدير النظام']) 
+    : new Set(['admin', 'Admin', 'شريك', 'مدير النظام']);
 
 // ── requireAuth ────────────────────────────────────────────────────────────────
 // Verifies the Bearer JWT and attaches the decoded payload to req.user.
