@@ -82,7 +82,7 @@ export const DEFAULT_DECISION_TYPES = [
 export const DECISION_TYPES = DEFAULT_DECISION_TYPES;
 
 export const USER_ROLES = ['شريك', 'محامي مسؤول', 'محامي', 'متدرب'];
-export const USER_ROLES_EN = { 'شريك': 'partner', 'محامي مسؤول': 'caseOwner', 'محامي': 'lawyer', 'متدرب': 'trainee' };
+export const USER_ROLES_EN = { 'admin': 'partner', 'شريك': 'partner', 'محامي مسؤول': 'caseOwner', 'محامي': 'lawyer', 'متدرب': 'trainee' };
 
 // --- Entity Names ---
 export const ENTITIES = {
