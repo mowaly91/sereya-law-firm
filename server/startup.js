@@ -1,15 +1,13 @@
 // ============================================================================
 // startup.js — Render free-tier bootstrap orchestrator
 // ============================================================================
-// On Render free tier there is no Shell access, so this file handles every
-// boot-time task automatically before handing off to server.js:
-//
+// Runs on every deploy before server.js:
 //   1. Validate required production env vars (fail fast)
-//   2. Run pending node-pg-migrate database migrations
-//   3. Seed the initial admin user if the users table is empty
-//      (only if INIT_ADMIN_EMAIL + INIT_ADMIN_PASSWORD are set)
+//   2. Run DB migrations — if schema already exists but pgmigrations table
+//      doesn't, we manually bootstrap the tracking table with raw SQL
+//      (avoids node-pg-migrate runner crashing on "table already exists")
+//   3. Seed initial admin user if users table is empty
 //   4. Launch server.js
-//
 // ============================================================================
 
 'use strict';
@@ -19,7 +17,6 @@ require('dotenv').config();
 const path     = require('path');
 const bcrypt   = require('bcryptjs');
 const { Pool } = require('pg');
-// node-pg-migrate exposes `runner` as a named CommonJS export
 const { runner } = require('node-pg-migrate');
 
 // ── 1. Fail-fast: required env vars ─────────────────────────────────────────
@@ -37,64 +34,88 @@ const { runner } = require('node-pg-migrate');
     console.log('[STARTUP] ✅ Env vars validated.');
 }());
 
-// ── 2. Run DB migrations (node-pg-migrate programmatic API) ─────────────────
+// ── 2. Run DB migrations ─────────────────────────────────────────────────────
 async function runMigrations() {
     console.log('[STARTUP] Running database migrations...');
 
-    // ── Pre-flight: detect existing schema vs fresh DB ──────────────────────
-    // If `users` table already exists but `pgmigrations` tracking table does
-    // not, the DB was set up manually before migrations were introduced.
-    // In that case we "fake" all migrations — record them as applied without
-    // re-executing the SQL — then let the second-migration (addColumns) run
-    // normally on the next loop.
-    const probePool = new Pool({
+    const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
     });
 
-    let shouldFake = false;
     try {
-        const { rows: u } = await probePool.query(
-            `SELECT to_regclass('public.users') AS tbl`
-        );
-        const { rows: m } = await probePool.query(
-            `SELECT to_regclass('public.pgmigrations') AS tbl`
-        );
-        const usersExist      = !!u[0].tbl;
-        const trackingExists  = !!m[0].tbl;
-        shouldFake = usersExist && !trackingExists;
-    } catch (e) {
-        console.warn('[STARTUP] Pre-flight check skipped:', e.message);
+        // Check whether schema already exists vs fresh DB
+        const { rows: u }  = await pool.query(`SELECT to_regclass('public.users') AS tbl`);
+        const { rows: pg } = await pool.query(`SELECT to_regclass('public.pgmigrations') AS tbl`);
+
+        const usersExist     = !!u[0].tbl;
+        const trackingExists = !!pg[0].tbl;
+
+        if (usersExist && !trackingExists) {
+            // ── Existing DB: manually create tracking table + record applied migrations
+            // We do NOT use the node-pg-migrate runner here because it would try
+            // to re-execute CREATE TABLE statements that already exist.
+            console.log('[STARTUP] Existing schema detected — bootstrapping migration tracking...');
+
+            await pool.query(`
+                CREATE TABLE pgmigrations (
+                    id     SERIAL       PRIMARY KEY,
+                    name   VARCHAR(255) NOT NULL,
+                    run_on TIMESTAMP    NOT NULL DEFAULT now()
+                )
+            `);
+
+            // Migration 1 — initial schema (users table already exists)
+            await pool.query(
+                `INSERT INTO pgmigrations (name, run_on) VALUES ($1, now())`,
+                ['1773920954370_initial-schema']
+            );
+
+            // Migration 2 — google-sheet fields: check if columns already exist
+            const { rows: col } = await pool.query(`
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'clients' AND column_name = 'driveLink'
+                LIMIT 1
+            `);
+
+            if (col.length > 0) {
+                // Columns exist → record migration 2 as done too, nothing to run
+                await pool.query(
+                    `INSERT INTO pgmigrations (name, run_on) VALUES ($1, now())`,
+                    ['1773930854841_add-client-google-sheet-fields']
+                );
+                console.log('[STARTUP] ✅ Migration tracking bootstrapped (all migrations applied).');
+                return; // Done — skip runner entirely
+            } else {
+                // Columns missing → record migration 1 only, let runner apply migration 2
+                console.log('[STARTUP] ✅ Migration 1 recorded. Will now apply migration 2...');
+            }
+        }
+    } catch (err) {
+        console.error('[STARTUP] ❌ Pre-flight migration check failed:', err.message);
+        process.exit(1);
     } finally {
-        await probePool.end();
+        await pool.end();
     }
 
-    const runnerOpts = {
-        databaseUrl:     process.env.DATABASE_URL,
-        dir:             path.join(__dirname, 'migrations'),
-        direction:       'up',
-        migrationsTable: 'pgmigrations',
-        count:           Infinity,
-        ssl:             { rejectUnauthorized: false },
-    };
-
+    // ── Normal path: runner applies any pending migrations ───────────────────
     try {
-        if (shouldFake) {
-            // Phase 1 – register all migrations as applied without re-running SQL
-            console.log('[STARTUP] Existing schema detected — recording migrations as applied (fake run)...');
-            await runner({ ...runnerOpts, fake: true });
-            console.log('[STARTUP] ✅ Migrations marked as applied. Schema already up to date.');
+        const migrationsRun = await runner({
+            databaseUrl:     process.env.DATABASE_URL,
+            dir:             path.join(__dirname, 'migrations'),
+            direction:       'up',
+            migrationsTable: 'pgmigrations',
+            count:           Infinity,
+            ssl:             { rejectUnauthorized: false },
+        });
+
+        if (migrationsRun && migrationsRun.length > 0) {
+            console.log(
+                `[STARTUP] ✅ ${migrationsRun.length} migration(s) applied:`,
+                migrationsRun.map(m => m.name || m.file || String(m)).join(', ')
+            );
         } else {
-            // Normal path – apply any pending migrations
-            const migrationsRun = await runner(runnerOpts);
-            if (migrationsRun && migrationsRun.length > 0) {
-                console.log(
-                    `[STARTUP] ✅ ${migrationsRun.length} migration(s) applied:`,
-                    migrationsRun.map(m => m.name || m.file || String(m)).join(', ')
-                );
-            } else {
-                console.log('[STARTUP] ✅ DB schema is up to date (no pending migrations).');
-            }
+            console.log('[STARTUP] ✅ DB schema is up to date (no pending migrations).');
         }
     } catch (err) {
         console.error('[STARTUP] ❌ Migration failed:', err.message);
@@ -108,11 +129,9 @@ async function seedAdminIfNeeded() {
     const password = process.env.INIT_ADMIN_PASSWORD;
 
     if (!email || !password) {
-        // Not configured — skip silently (prod may already have users)
-        return;
+        return; // Not configured — skip silently
     }
 
-    // We need a direct pool connection (db.js is not loaded yet at this point)
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
@@ -135,14 +154,12 @@ async function seedAdminIfNeeded() {
         const now  = new Date().toISOString();
 
         await pool.query(
-            `INSERT INTO users
-                (id, name, role, email, active, password_hash, _createdAt, _updatedAt, _deleted)
+            `INSERT INTO users (id, name, role, email, active, password_hash, _createdAt, _updatedAt, _deleted)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [id, 'Admin', 'admin', email.trim().toLowerCase(), 1, hash, now, now, 0]
         );
         console.log('[STARTUP] ✅ Initial admin user created successfully.');
     } catch (err) {
-        // Non-fatal — if admin already exists (unique constraint) just log it
         if (err.code === '23505') {
             console.log('[STARTUP] ℹ️  Admin email already exists — skipping seed.');
         } else {
@@ -157,7 +174,6 @@ async function seedAdminIfNeeded() {
 async function main() {
     await runMigrations();
     await seedAdminIfNeeded();
-
     console.log('[STARTUP] 🚀 Starting server...');
     require('./server.js');
 }
