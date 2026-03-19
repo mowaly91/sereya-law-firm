@@ -44,6 +44,14 @@ async function runMigrations() {
         await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS "driveLink" TEXT`);
         await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS "sourceIndex" TEXT`);
 
+        // Guarantee Users soft-delete and timestamp columns exist for legacy DBs
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "_deleted" INTEGER DEFAULT 0 NOT NULL`);
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "_createdAt" TEXT`);
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "_updatedAt" TEXT`);
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "invite_token" TEXT`);
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "invite_token_expires" TEXT`);
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "password_hash" TEXT`);
+
         const { rows: pg } = await pool.query(`SELECT to_regclass('public.pgmigrations') AS tbl`);
         if (pg[0].tbl) {
             await pool.query(
