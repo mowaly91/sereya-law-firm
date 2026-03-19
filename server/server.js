@@ -20,22 +20,23 @@ const { requireAuth, requireSuperAdmin } = require('./middleware/auth');
     if (!process.env.JWT_SECRET)
         missing.push('JWT_SECRET              (required: random secret ≥ 32 chars for signing JWTs)');
 
-    // Google Sheets import is the primary client-onboarding method in production.
-    // Require at least one of the two inline-JSON credential variables.
-    const sheetsCredsPresent =
-        process.env.GOOGLE_SHEETS_CREDENTIALS ||
-        process.env.GOOGLE_CREDENTIALS;
-    if (!sheetsCredsPresent)
-        missing.push(
-            'GOOGLE_SHEETS_CREDENTIALS or GOOGLE_CREDENTIALS' +
-            '  (required: service-account JSON string for Google Sheets import)'
-        );
-
     if (missing.length) {
         console.error('\n[STARTUP] ❌ Missing required environment variables in production:');
         missing.forEach(v => console.error('  •', v));
         console.error('[STARTUP] Set these variables in your deployment environment and restart.\n');
         process.exit(1);
+    }
+
+    // Google Sheets creds: warn but don't block startup.
+    // The import endpoint will return a runtime error if creds are absent.
+    const sheetsCredsPresent =
+        process.env.GOOGLE_SHEETS_CREDENTIALS ||
+        process.env.GOOGLE_CREDENTIALS;
+    if (!sheetsCredsPresent) {
+        console.warn(
+            '[STARTUP] ⚠️  GOOGLE_SHEETS_CREDENTIALS / GOOGLE_CREDENTIALS not set.' +
+            ' The /api/clients/import/google-sheet endpoints will fail at runtime.'
+        );
     }
 
     console.log('[STARTUP] ✅ Production environment validated.');

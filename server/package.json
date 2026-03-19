@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node startup.js",
+    "start:server": "node server.js",
     "test": "node --test tests/smoke.test.js",
     "test:watch": "node --test --watch tests/smoke.test.js",
     "migrate": "node-pg-migrate",
