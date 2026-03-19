@@ -23,6 +23,7 @@ import { renderAdminSettings } from './pages/admin/settings.js';
 import { renderCalendar } from './pages/calendar/calendar.js';
 import { initNotificationEngine } from './components/notification.js';
 import { renderClientImport } from './pages/clients/client-import.js';
+import { renderClientSheetImport } from './pages/clients/client-sheet-import.js';
 import { renderLogin } from './pages/auth/login.js';
 import { renderSetPassword } from './pages/auth/set-password.js';
 import { openModal, closeModal } from './components/modal.js';
@@ -90,6 +91,7 @@ async function bootstrapApp() {
   registerRoute('/clients/new', renderClientForm);
   registerRoute('/clients/:id/edit', renderClientForm);
   registerRoute('/clients/import', renderClientImport);
+  registerRoute('/clients/import-sheet', renderClientSheetImport);
   registerRoute('/cases', renderCaseList);
   registerRoute('/cases/new', renderCaseForm);
   registerRoute('/cases/:id', renderCaseDetail);

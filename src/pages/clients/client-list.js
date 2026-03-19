@@ -5,7 +5,7 @@
 import Store from '../../data/store.js';
 import { ENTITIES } from '../../data/models.js';
 import { setPageTitle, formatDate } from '../../main.js';
-import { can } from '../../data/permissions.js';
+import { can, isPartner } from '../../data/permissions.js';
 import { showToast } from '../../components/toast.js';
 import { confirmModal } from '../../components/modal.js';
 import { logAudit } from '../../data/audit.js';
@@ -23,9 +23,10 @@ export function renderClientList(container) {
           <div class="page-header-sub">${clients.length} عميل</div>
         </div>
         <div class="flex gap-2">
-            <button class="btn btn-secondary" onclick="window.location.hash='/clients/import'">
-                <i class='bx bxl-google-drive'></i> استيراد من درايف
-            </button>
+            ${isPartner() ? `
+            <button class="btn btn-secondary" onclick="window.location.hash='/clients/import-sheet'">
+                <i class='bx bxs-spreadsheet'></i> استيراد من Sheets
+            </button>` : ''}
             <button class="btn btn-primary" id="add-client-btn">
                 <i class='bx bx-plus'></i> إضافة عميل
             </button>
