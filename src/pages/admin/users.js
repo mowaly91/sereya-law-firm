@@ -99,14 +99,17 @@ export function renderUserManagement(container) {
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
-                    if (!res.ok) throw new Error('فشل الحذف');
+                    if (!res.ok) {
+                        const d = await res.json().catch(() => ({}));
+                        throw new Error(d.error || 'فشل الحذف');
+                    }
                     
                     Store.softDelete(ENTITIES.USERS, id);
                     logAudit(ENTITIES.USERS, id, 'delete', { name });
                     showToast('تم حذف المستخدم بنجاح', 'success');
                     renderUserManagement(container);
                 } catch (e) {
-                    showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
+                    showToast(e.message || 'حدث خطأ أثناء الاتصال بالخادم', 'error');
                 }
             });
         });
