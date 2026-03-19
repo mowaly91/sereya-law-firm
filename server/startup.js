@@ -38,6 +38,12 @@ async function runMigrations() {
     // Clean up any partially-applied migration 3 record so it re-runs cleanly
     const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
     try {
+        // Guarantee Google Sheet import columns exist (bypassing migration state issues)
+        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS "fullNameAr" TEXT`);
+        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS "powerOfAttorneyNo" TEXT`);
+        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS "driveLink" TEXT`);
+        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS "sourceIndex" TEXT`);
+
         const { rows: pg } = await pool.query(`SELECT to_regclass('public.pgmigrations') AS tbl`);
         if (pg[0].tbl) {
             await pool.query(
