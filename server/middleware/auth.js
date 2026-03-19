@@ -18,9 +18,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'sereya-dev-fallback-NOT-FOR-PRODUC
 const isStrictAdmin = process.env.RBAC_STRICT_ADMIN === 'true';
 
 // Roles that carry full super-admin privileges
-// TODO: During transition accept ['admin', 'Admin', 'شريك']. After migration, accept ONLY 'admin'.
+// The user explicitly requested to treat 'شريك' (partner) as an admin permanently.
 const SUPER_ADMIN_ROLES = isStrictAdmin 
-    ? new Set(['admin']) 
+    ? new Set(['admin', 'شريك']) 
     : new Set(['admin', 'Admin', 'شريك']);
 
 // ── requireAuth ────────────────────────────────────────────────────────────────
