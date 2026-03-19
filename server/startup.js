@@ -40,24 +40,61 @@ const { runner } = require('node-pg-migrate');
 // ── 2. Run DB migrations (node-pg-migrate programmatic API) ─────────────────
 async function runMigrations() {
     console.log('[STARTUP] Running database migrations...');
-    try {
-        const migrationsRun = await runner({
-            databaseUrl:     process.env.DATABASE_URL,
-            dir:             path.join(__dirname, 'migrations'),
-            direction:       'up',
-            migrationsTable: 'pgmigrations',
-            count:           Infinity,
-            // Render PostgreSQL requires SSL
-            ssl: { rejectUnauthorized: false },
-        });
 
-        if (migrationsRun && migrationsRun.length > 0) {
-            console.log(
-                `[STARTUP] ✅ ${migrationsRun.length} migration(s) applied:`,
-                migrationsRun.map(m => m.name || m.file || String(m)).join(', ')
-            );
+    // ── Pre-flight: detect existing schema vs fresh DB ──────────────────────
+    // If `users` table already exists but `pgmigrations` tracking table does
+    // not, the DB was set up manually before migrations were introduced.
+    // In that case we "fake" all migrations — record them as applied without
+    // re-executing the SQL — then let the second-migration (addColumns) run
+    // normally on the next loop.
+    const probePool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+    });
+
+    let shouldFake = false;
+    try {
+        const { rows: u } = await probePool.query(
+            `SELECT to_regclass('public.users') AS tbl`
+        );
+        const { rows: m } = await probePool.query(
+            `SELECT to_regclass('public.pgmigrations') AS tbl`
+        );
+        const usersExist      = !!u[0].tbl;
+        const trackingExists  = !!m[0].tbl;
+        shouldFake = usersExist && !trackingExists;
+    } catch (e) {
+        console.warn('[STARTUP] Pre-flight check skipped:', e.message);
+    } finally {
+        await probePool.end();
+    }
+
+    const runnerOpts = {
+        databaseUrl:     process.env.DATABASE_URL,
+        dir:             path.join(__dirname, 'migrations'),
+        direction:       'up',
+        migrationsTable: 'pgmigrations',
+        count:           Infinity,
+        ssl:             { rejectUnauthorized: false },
+    };
+
+    try {
+        if (shouldFake) {
+            // Phase 1 – register all migrations as applied without re-running SQL
+            console.log('[STARTUP] Existing schema detected — recording migrations as applied (fake run)...');
+            await runner({ ...runnerOpts, fake: true });
+            console.log('[STARTUP] ✅ Migrations marked as applied. Schema already up to date.');
         } else {
-            console.log('[STARTUP] ✅ DB schema is up to date (no pending migrations).');
+            // Normal path – apply any pending migrations
+            const migrationsRun = await runner(runnerOpts);
+            if (migrationsRun && migrationsRun.length > 0) {
+                console.log(
+                    `[STARTUP] ✅ ${migrationsRun.length} migration(s) applied:`,
+                    migrationsRun.map(m => m.name || m.file || String(m)).join(', ')
+                );
+            } else {
+                console.log('[STARTUP] ✅ DB schema is up to date (no pending migrations).');
+            }
         }
     } catch (err) {
         console.error('[STARTUP] ❌ Migration failed:', err.message);
