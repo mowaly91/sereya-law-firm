@@ -7,7 +7,7 @@ import { ENTITIES, USER_ROLES, createUser } from '../../data/models.js';
 import { setPageTitle } from '../../main.js';
 import { showToast } from '../../components/toast.js';
 import { openModal, closeModal, confirmModal } from '../../components/modal.js';
-import { isPartner, getAuthToken } from '../../data/permissions.js';
+import { isPartner, getAuthToken, getCurrentUser } from '../../data/permissions.js';
 import { logAudit } from '../../data/audit.js';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
@@ -68,7 +68,7 @@ export function renderUserManagement(container) {
                 <td>
                   <div class="table-actions">
                     <button class="btn btn-ghost btn-sm edit-user" data-id="${u.id}" title="تعديل"><i class='bx bx-edit'></i></button>
-                    ${u.role === 'مدير النظام' || u.role === 'admin' ? '' : `<button class="btn btn-ghost btn-sm delete-user" data-id="${u.id}" data-name="${u.name}" title="حذف"><i class='bx bx-trash text-red-500'></i></button>`}
+                    ${u.id === getCurrentUser()?.id ? '' : `<button class="btn btn-ghost btn-sm delete-user" data-id="${u.id}" data-name="${u.name}" title="حذف"><i class='bx bx-trash text-red-500'></i></button>`}
                   </div>
                 </td>
               </tr>
