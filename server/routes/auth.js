@@ -11,9 +11,10 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { dbAsync } = require('../db');
+const { requireAuth, requireSuperAdmin, JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'sereya-law-firm-secret-2026';
+// JWT_SECRET is imported from middleware/auth.js (fail-fast in production is enforced there)
 const JWT_EXPIRES = '7d';
 const INVITE_EXPIRES_HOURS = 48;
 
@@ -117,8 +118,8 @@ router.post('/set-password', async (req, res) => {
     }
 });
 
-// ---- POST /api/auth/send-invite ----
-router.post('/send-invite', async (req, res) => {
+// ---- POST /api/auth/send-invite (protected: auth + super-admin) ----
+router.post('/send-invite', requireAuth, requireSuperAdmin, async (req, res) => {
     try {
         const { userId } = req.body;
         if (!userId) {
@@ -188,26 +189,10 @@ router.post('/send-invite', async (req, res) => {
     }
 });
 
-// ---- POST /api/auth/admin-set-password ----
+// ---- POST /api/auth/admin-set-password (protected: auth + super-admin) ----
 // Allows a partner/admin to set any user's password directly (no email needed)
-router.post('/admin-set-password', async (req, res) => {
+router.post('/admin-set-password', requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-        const authHeader = req.headers['authorization'] || '';
-        const token = authHeader.replace('Bearer ', '');
-        if (!token) return res.status(401).json({ error: 'غير مصرح' });
-
-        let caller;
-        try {
-            caller = jwt.verify(token, JWT_SECRET);
-        } catch {
-            return res.status(401).json({ error: 'رمز المصادقة غير صالح' });
-        }
-
-        // Only partners can set other users' passwords
-        if (caller.role !== 'شريك') {
-            return res.status(403).json({ error: 'هذه العملية متاحة للشركاء فقط' });
-        }
-
         const { userId, password } = req.body;
         if (!userId || !password) {
             return res.status(400).json({ error: 'معرف المستخدم وكلمة المرور مطلوبان' });
@@ -232,21 +217,10 @@ router.post('/admin-set-password', async (req, res) => {
     }
 });
 
-// ---- POST /api/auth/change-password ----
+// ---- POST /api/auth/change-password (protected: any authenticated user) ----
 // Allows any authenticated user to change their own password
-router.post('/change-password', async (req, res) => {
+router.post('/change-password', requireAuth, async (req, res) => {
     try {
-        const authHeader = req.headers['authorization'] || '';
-        const token = authHeader.replace('Bearer ', '');
-        if (!token) return res.status(401).json({ error: 'غير مصرح' });
-
-        let caller;
-        try {
-            caller = jwt.verify(token, JWT_SECRET);
-        } catch {
-            return res.status(401).json({ error: 'رمز المصادقة غير صالح' });
-        }
-
         const { currentPassword, newPassword } = req.body;
         if (!currentPassword || !newPassword) {
             return res.status(400).json({ error: 'كلمة المرور الحالية والجديدة مطلوبتان' });
@@ -255,7 +229,7 @@ router.post('/change-password', async (req, res) => {
             return res.status(400).json({ error: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل' });
         }
 
-        const user = await dbAsync.get(`SELECT * FROM users WHERE id = ? AND _deleted = 0`, [caller.id]);
+        const user = await dbAsync.get(`SELECT * FROM users WHERE id = ? AND _deleted = 0`, [req.user.id]);
         if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' });
 
         // Verify current password — but allow if no password is set yet (first-time setup)
@@ -267,7 +241,7 @@ router.post('/change-password', async (req, res) => {
         const hash = await bcrypt.hash(newPassword, 12);
         await dbAsync.run(
             `UPDATE users SET password_hash = ?, _updatedAt = ? WHERE id = ?`,
-            [hash, new Date().toISOString(), caller.id]
+            [hash, new Date().toISOString(), req.user.id]
         );
 
         res.json({ success: true, message: 'تم تغيير كلمة المرور بنجاح' });

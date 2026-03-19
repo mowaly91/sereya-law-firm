@@ -25,9 +25,23 @@ dist-ssr
 # Local Netlify folder
 .netlify
 
-# Backend
-server/database.sqlite
+# ── Secrets & real env files (NEVER commit these) ────────────────────────────
+# .env.example is intentionally tracked (placeholders only).
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+
+# Google credentials / service account keys
+credentials.json
 server/credentials.json
+*.service-account.json
+google-credentials.json
+
+# ── Backend runtime & tooling artefacts ──────────────────────────────────────
+server/database.sqlite
 server/setup_passwords.js
 server/test_login.js
 server/test_scan.js

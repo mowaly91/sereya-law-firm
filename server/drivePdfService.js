@@ -1,14 +1,12 @@
 const { google } = require('googleapis');
 const vision = require('@google-cloud/vision');
-const fs = require('fs');
-const path = require('path');
 
-const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
+
 const SCOPES = ['https://www.googleapis.com/auth/drive.readonly'];
 
 /**
- * Helper to get the parsed credentials object either from the environment variable 
- * or from the local credentials.json file.
+ * Helper to get the parsed credentials object from the environment variable.
+ * Fallback to default Google Application Credentials if not provided.
  */
 function getCredentials() {
     if (process.env.GOOGLE_CREDENTIALS) {
@@ -18,15 +16,6 @@ function getCredentials() {
             console.error("Failed to parse GOOGLE_CREDENTIALS from environment variable.", err);
         }
     }
-    
-    if (fs.existsSync(CREDENTIALS_PATH)) {
-        try {
-            return JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
-        } catch (err) {
-            console.error("Failed to read credentials.json.", err);
-        }
-    }
-    
     return null;
 }
 
@@ -41,21 +30,26 @@ if (creds) {
             private_key: creds.private_key
         }
     });
+} else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    visionClient = new vision.ImageAnnotatorClient();
 }
 
 async function getAuth() {
-    if (!creds) {
-        throw new Error("Missing Google Credentials. Please provide process.env.GOOGLE_CREDENTIALS or create server/credentials.json.");
+    if (creds) {
+        return new google.auth.GoogleAuth({
+            credentials: {
+                client_email: creds.client_email,
+                private_key: creds.private_key
+            },
+            scopes: SCOPES,
+        });
+    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        return new google.auth.GoogleAuth({
+            scopes: SCOPES,
+        });
+    } else {
+        throw new Error("Missing Google Credentials. Please provide process.env.GOOGLE_CREDENTIALS (JSON string) or process.env.GOOGLE_APPLICATION_CREDENTIALS (path).");
     }
-
-    const auth = new google.auth.GoogleAuth({
-        credentials: {
-            client_email: creds.client_email,
-            private_key: creds.private_key
-        },
-        scopes: SCOPES,
-    });
-    return auth;
 }
 
 /**

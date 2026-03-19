@@ -77,6 +77,9 @@ function generateCrudRoutes(tableName) {
             res.status(201).json(data);
         } catch (error) {
             console.error(error);
+            if (error.code === '23505') {
+                return res.status(409).json({ error: 'هذا السجل موجود بالفعل (قيمة مكررة)' });
+            }
             res.status(500).json({ error: 'Server error saving data.' });
         }
     });
@@ -99,6 +102,13 @@ function generateCrudRoutes(tableName) {
             delete dbData.id;
             delete dbData._createdAt;
 
+            // Restrict driveLink update to super-admin only
+            if (tableName === 'clients' && dbData.driveLink !== undefined) {
+                if (req.user && req.user.role !== 'admin') {
+                    delete dbData.driveLink;
+                }
+            }
+
             const fields = Object.keys(dbData);
             const values = Object.values(dbData);
             const assignments = fields.map(f => `${f} = ?`).join(', ');
@@ -113,6 +123,9 @@ function generateCrudRoutes(tableName) {
             res.json({ newItem: updatedItem });
         } catch (error) {
             console.error(error);
+            if (error.code === '23505') {
+                return res.status(409).json({ error: 'هذا السجل موجود بالفعل (قيمة مكررة)' });
+            }
             res.status(500).json({ error: 'Server error updating data.' });
         }
     });
