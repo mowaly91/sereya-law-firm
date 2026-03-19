@@ -14,7 +14,7 @@ async function logAuditEvents(userId, action, entity, entityId, details = {}) {
         const detailsStr = typeof details === 'object' ? JSON.stringify(details) : details;
 
         await dbAsync.run(
-            `INSERT INTO audit_logs (id, "userId", action, entity, "entityId", details, "_createdAt", _deleted) 
+            `INSERT INTO audit_logs (id, userId, action, entity, entityId, details, _createdAt, _deleted) 
              VALUES (?, ?, ?, ?, ?, ?, ?, 0)`,
             [id, userId, action, entity, entityId, detailsStr, createdAt]
         );

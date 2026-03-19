@@ -199,14 +199,14 @@ async function commitData(importRequest, userId) {
                     await dbAsync.run(
                         `UPDATE clients SET
                              name = ?,
-                             fullNameAr = ?,
-                             poaNumber = ?,
-                             powerOfAttorneyNo = ?,
-                             notaryOffice = ?,
+                             "fullNameAr" = ?,
+                             "poaNumber" = ?,
+                             "powerOfAttorneyNo" = ?,
+                             "notaryOffice" = ?,
                              phone = ?,
-                             driveLink = ?,
-                             sourceIndex = ?,
-                             _updatedAt = ?
+                             "driveLink" = ?,
+                             "sourceIndex" = ?,
+                             "_updatedAt" = ?
                          WHERE id = ?`,
                         [
                             rowData.name, rowData.fullNameAr, rowData.poaNumber, rowData.powerOfAttorneyNo,
@@ -224,8 +224,8 @@ async function commitData(importRequest, userId) {
                     const id = generateId();
                     await dbAsync.run(
                         `INSERT INTO clients (
-                            id, name, nationalId, fullNameAr, poaNumber, powerOfAttorneyNo, 
-                            notaryOffice, phone, driveLink, sourceIndex, _createdAt, _updatedAt, _deleted
+                            id, name, "nationalId", "fullNameAr", "poaNumber", "powerOfAttorneyNo", 
+                            "notaryOffice", phone, "driveLink", "sourceIndex", "_createdAt", "_updatedAt", _deleted
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
                         [
                             id, rowData.name, rowData.nationalId, rowData.fullNameAr, rowData.poaNumber, rowData.powerOfAttorneyNo,
