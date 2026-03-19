@@ -16,8 +16,8 @@ function generateId() {
 const ALLOWED_USER_FIELDS = ['name', 'role', 'email', 'phone', 'active', 'password'];
 const REQUIRED_USER_FIELDS = ['name', 'email', 'role'];
 
-// 'Admin' and 'شريك' are removed from here. They are normalized to 'admin' before checking.
-const VALID_ROLES = ['admin', 'محامي', 'مستشار', 'إداري', 'متدرب', 'user'];
+// All roles currently known by the UI or legacy tables
+const VALID_ROLES = ['admin', 'مدير النظام', 'شريك', 'محامي مسؤول', 'محامي', 'مستشار', 'إداري', 'متدرب', 'user'];
 
 // Generate CRUD structure
 router.get('/', async (req, res) => {

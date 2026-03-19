@@ -6,7 +6,7 @@ import Store from '../../data/store.js';
 import { ENTITIES, USER_ROLES, createUser } from '../../data/models.js';
 import { setPageTitle } from '../../main.js';
 import { showToast } from '../../components/toast.js';
-import { openModal, closeModal } from '../../components/modal.js';
+import { openModal, closeModal, confirmModal } from '../../components/modal.js';
 import { isPartner, getAuthToken } from '../../data/permissions.js';
 import { logAudit } from '../../data/audit.js';
 
@@ -68,6 +68,7 @@ export function renderUserManagement(container) {
                 <td>
                   <div class="table-actions">
                     <button class="btn btn-ghost btn-sm edit-user" data-id="${u.id}" title="تعديل"><i class='bx bx-edit'></i></button>
+                    ${u.role === 'مدير النظام' || u.role === 'admin' ? '' : `<button class="btn btn-ghost btn-sm delete-user" data-id="${u.id}" data-name="${u.name}" title="حذف"><i class='bx bx-trash text-red-500'></i></button>`}
                   </div>
                 </td>
               </tr>
@@ -84,6 +85,30 @@ export function renderUserManagement(container) {
         btn.addEventListener('click', () => {
             const user = Store.getById(ENTITIES.USERS, btn.dataset.id);
             if (user) openUserModal(user, container);
+        });
+    });
+
+    container.querySelectorAll('.delete-user').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            const name = btn.dataset.name;
+            confirmModal('حذف المستخدم', `هل أنت متأكد من حذف المستخدم <strong>${name}</strong>؟<br><br><span style="color:var(--text-secondary);font-size:13px;">لن يتمكن هذا المستخدم من الدخول للنظام مرة أخرى.</span>`, async () => {
+                try {
+                    const token = getAuthToken();
+                    const res = await fetch(`${API_BASE}/users/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!res.ok) throw new Error('فشل الحذف');
+                    
+                    Store.softDelete(ENTITIES.USERS, id);
+                    logAudit(ENTITIES.USERS, id, 'delete', { name });
+                    showToast('تم حذف المستخدم بنجاح', 'success');
+                    renderUserManagement(container);
+                } catch (e) {
+                    showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
+                }
+            });
         });
     });
 
