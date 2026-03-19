@@ -128,7 +128,55 @@ async function runWithRunner() {
     }
 }
 
-// ── 3. Seed initial admin user ───────────────────────────────────────────────
+// ── 3a. Force-reset admin password (one-time escape hatch) ───────────────────
+// Set RESET_ADMIN_PASSWORD=true in Render env to force-update the password for
+// INIT_ADMIN_EMAIL. Remove the env var after first successful login.
+async function resetAdminPasswordIfRequested() {
+    if (process.env.RESET_ADMIN_PASSWORD !== 'true') return;
+
+    const email    = process.env.INIT_ADMIN_EMAIL;
+    const password = process.env.INIT_ADMIN_PASSWORD;
+    if (!email || !password) {
+        console.warn('[STARTUP] ⚠️  RESET_ADMIN_PASSWORD=true but INIT_ADMIN_EMAIL/PASSWORD not set — skipping.');
+        return;
+    }
+
+    const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+    });
+
+    try {
+        const hash = await bcrypt.hash(password, 12);
+        const now  = new Date().toISOString();
+
+        // Try update existing user first
+        const { rowCount } = await pool.query(
+            `UPDATE users SET password_hash = $1, role = 'admin', active = 1, _updatedAt = $2
+             WHERE email = $3 AND _deleted = 0`,
+            [hash, now, email.trim().toLowerCase()]
+        );
+
+        if (rowCount > 0) {
+            console.log(`[STARTUP] ✅ Password reset for ${email} (role enforced: admin).`);
+        } else {
+            // User doesn't exist — create them
+            const id = 'admin_' + Date.now().toString(36);
+            await pool.query(
+                `INSERT INTO users (id, name, role, email, active, password_hash, _createdAt, _updatedAt, _deleted)
+                 VALUES ($1, $2, 'admin', $3, 1, $4, $5, $5, 0)`,
+                [id, 'Admin', email.trim().toLowerCase(), hash, now]
+            );
+            console.log(`[STARTUP] ✅ Admin user created: ${email}`);
+        }
+    } catch (err) {
+        console.error('[STARTUP] ⚠️  Password reset error (non-fatal):', err.message);
+    } finally {
+        await pool.end();
+    }
+}
+
+
 async function seedAdminIfNeeded() {
     const email    = process.env.INIT_ADMIN_EMAIL;
     const password = process.env.INIT_ADMIN_PASSWORD;
@@ -170,6 +218,7 @@ async function seedAdminIfNeeded() {
 // ── 4. Launch server.js ──────────────────────────────────────────────────────
 async function main() {
     await runMigrations();
+    await resetAdminPasswordIfRequested();
     await seedAdminIfNeeded();
     console.log('[STARTUP] 🚀 Starting server...');
     require('./server.js');
