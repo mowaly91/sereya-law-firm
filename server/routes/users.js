@@ -91,7 +91,7 @@ router.post('/', requireSuperAdmin, async (req, res) => {
         if (err.code === '23505' || (err.message && err.message.includes('UNIQUE'))) {
             return res.status(409).json({ error: 'هذا السجل موجود بالفعل (البريد مكرر)' });
         }
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: err.message || 'Server error' });
     }
 });
 

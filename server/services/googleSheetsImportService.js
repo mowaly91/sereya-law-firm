@@ -144,7 +144,7 @@ async function previewSheet(sheetUrlOrId, tabName = '', range = '') {
         const placeholders = nids.map(() => '?').join(',');
         
         // Check for conflicts in DB
-        const existingClients = await dbAsync.all(`SELECT id, "nationalId" FROM clients WHERE "nationalId" IN (${placeholders}) AND _deleted = 0`, nids);
+        const existingClients = await dbAsync.all(`SELECT id, nationalId FROM clients WHERE nationalId IN (${placeholders}) AND _deleted = 0`, nids);
         
         const existingMap = {};
         existingClients.forEach(c => { existingMap[c.nationalId] = c.id; });
@@ -188,7 +188,7 @@ async function commitData(importRequest, userId) {
                 results.skipped++;
                 continue;
             }
-            const existing = await dbAsync.get(`SELECT * FROM clients WHERE "nationalId" = ? AND _deleted = 0`, [rowData.nationalId]);
+            const existing = await dbAsync.get(`SELECT * FROM clients WHERE nationalId = ? AND _deleted = 0`, [rowData.nationalId]);
 
             const now = new Date().toISOString();
 
@@ -198,14 +198,14 @@ async function commitData(importRequest, userId) {
                     await dbAsync.run(
                         `UPDATE clients SET
                              name = ?,
-                             "fullNameAr" = ?,
-                             "poaNumber" = ?,
-                             "powerOfAttorneyNo" = ?,
-                             "notaryOffice" = ?,
+                             fullNameAr = ?,
+                             poaNumber = ?,
+                             powerOfAttorneyNo = ?,
+                             notaryOffice = ?,
                              phone = ?,
-                             "driveLink" = ?,
-                             "sourceIndex" = ?,
-                             "_updatedAt" = ?
+                             driveLink = ?,
+                             sourceIndex = ?,
+                             _updatedAt = ?
                          WHERE id = ?`,
                         [
                             rowData.name, rowData.fullNameAr, rowData.poaNumber, rowData.powerOfAttorneyNo,
@@ -223,8 +223,8 @@ async function commitData(importRequest, userId) {
                     const id = generateId();
                     await dbAsync.run(
                         `INSERT INTO clients (
-                            id, name, "nationalId", "fullNameAr", "poaNumber", "powerOfAttorneyNo", 
-                            "notaryOffice", phone, "driveLink", "sourceIndex", "_createdAt", "_updatedAt", _deleted
+                            id, name, nationalId, fullNameAr, poaNumber, powerOfAttorneyNo, 
+                            notaryOffice, phone, driveLink, sourceIndex, _createdAt, _updatedAt, _deleted
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
                         [
                             id, rowData.name, rowData.nationalId, rowData.fullNameAr, rowData.poaNumber, rowData.powerOfAttorneyNo,

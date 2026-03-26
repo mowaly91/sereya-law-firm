@@ -39,10 +39,10 @@ async function runMigrations() {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
     try {
         // Guarantee Google Sheet import columns exist (bypassing migration state issues)
-        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS "fullNameAr" TEXT`);
-        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS "powerOfAttorneyNo" TEXT`);
-        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS "driveLink" TEXT`);
-        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS "sourceIndex" TEXT`);
+        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS fullnamear TEXT`);
+        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS powerofattorneyno TEXT`);
+        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS drivelink TEXT`);
+        await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS sourceindex TEXT`);
 
         // Guarantee Users soft-delete and timestamp columns exist for legacy DBs
         await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "_deleted" INTEGER DEFAULT 0 NOT NULL`);
