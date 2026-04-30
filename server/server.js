@@ -55,6 +55,7 @@ app.use(cors({
         // Allow requests with no origin (curl, server-to-server, health checks)
         if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin)) return callback(null, true);
+        console.warn('[CORS] Blocked origin', { origin, allowedOrigins });
         return callback(new Error(`CORS: origin "${origin}" not allowed`));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -179,4 +180,3 @@ app.use((err, req, res, _next) => { // eslint-disable-line no-unused-vars
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
-

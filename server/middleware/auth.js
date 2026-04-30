@@ -12,7 +12,15 @@ if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
     process.exit(1);
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sereya-dev-fallback-NOT-FOR-PRODUCTION';
+const ALLOW_INSECURE_DEV_SECRET = process.env.ALLOW_INSECURE_DEV_SECRET === 'true';
+const JWT_SECRET = process.env.JWT_SECRET || (ALLOW_INSECURE_DEV_SECRET ? 'sereya-dev-fallback-NOT-FOR-PRODUCTION' : null);
+
+if (!JWT_SECRET) {
+    console.error(
+        '[FATAL] JWT_SECRET is missing. Set JWT_SECRET or explicitly set ALLOW_INSECURE_DEV_SECRET=true for local-only development.'
+    );
+    process.exit(1);
+}
 
 // ── RBAC strict admin switch ──────────────────────────────────────────────────
 const isStrictAdmin = process.env.RBAC_STRICT_ADMIN === 'true';
