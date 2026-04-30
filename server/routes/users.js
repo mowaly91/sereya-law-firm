@@ -48,8 +48,8 @@ router.post('/', requireSuperAdmin, async (req, res) => {
     try {
         const data = validateFields(req.body, ALLOWED_USER_FIELDS, REQUIRED_USER_FIELDS);
         
-        // Normalize role
-        if (data.role === 'Admin' || data.role === 'شريك') {
+        // Normalize legacy spelling only; preserve business roles like شريك.
+        if (data.role === 'Admin') {
             data.role = 'admin';
         }
 
@@ -102,8 +102,8 @@ router.put('/:id', requireSuperAdmin, async (req, res) => {
         const data = validateFields(req.body, ALLOWED_USER_FIELDS, []); 
         if (Object.keys(data).length === 0) return res.status(400).json({ error: 'لا توجد بيانات للتحديث' });
 
-        // Normalize role
-        if (data.role === 'Admin' || data.role === 'شريك') {
+        // Normalize legacy spelling only; preserve business roles like شريك.
+        if (data.role === 'Admin') {
             data.role = 'admin';
         }
 
